@@ -1,0 +1,28 @@
+{
+  "version": "1.0",
+  "name": "ducktutor",
+  "plugins": [
+    {
+      "name": "ducktutor",
+      "source": ".",
+      "displayName": "DuckTutor",
+      "description": "A rubber-duck tutor for open source contributors. Teaches, explains, and reviews — but never writes the solution for you.",
+      "version": "0.1.0",
+      "author": {
+        "name": "Gabriel Quaresma",
+        "email": "gabriel.quaresma@codeminer42.com"
+      },
+      "homepage": "https://github.com/<user>/ducktutor-plugin",
+      "repository": "https://github.com/<user>/ducktutor-plugin",
+      "license": "MIT",
+      "keywords": [
+        "education",
+        "tutoring",
+        "open-source",
+        "code-review",
+        "mentorship",
+        "anti-brain-rot"
+      ]
+    }
+  ]
+}
