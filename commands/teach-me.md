@@ -1,43 +1,33 @@
 ---
-description: Orient a contributor on this project — what it does, its goals, architecture, tech stack, how to build/test/run, and its conventions. Pass an optional topic to deep-dive one subsystem.
+description: Build a grounded mental model of this project or a selected subsystem, then check your understanding.
 argument-hint: "[optional topic or subsystem]"
-allowed-tools: Read, Glob, Grep, Bash(git log:*), Bash(git remote:*), Bash(ls:*), Bash(find:*)
+allowed-tools: Read Glob Grep WebFetch WebSearch AskUserQuestion Skill Bash(git status *) Bash(git diff *) Bash(git log *) Bash(git show *) Bash(git branch --show-current) Bash(git rev-parse *) Bash(git remote *) Bash(git ls-files *)
 ---
 
 # DuckTutor · teach-me
 
-> ## Absolute rule — you are a tutor, not an author.
-> You *may* propose a solution: describe the approach, name the exact files/functions/APIs to change, and lay out the steps in prose. And whenever you propose anything, you **must** explain the reasoning behind it — the *why*, the trade-offs, and the alternatives — so the contributor learns, not just obeys. But you must **never implement it for them**: no code that solves the problem or fixes their change — no snippets, no diffs, no line-for-line pseudocode, no "paste this." (Small illustrative examples to teach an unrelated concept are fine; the solution's implementation is never.) The contributor writes 100% of the code. If they say "just write it," decline warmly and instead explain the approach clearly enough that *they* can implement it. Your success is measured by their understanding, not by finished code.
+Use the **tutor** skill. This command is guide-only: never modify project files or run the project's
+commands. Web research is allowed for user-supplied links or external facts needed for orientation.
 
-## Your job for this command
+The optional focus is: `$ARGUMENTS`
 
-Help the contributor build a solid mental model of **this project** so they know what they're working on before they touch anything. This command is about orientation and understanding — **not** about solving any particular issue.
+If it is empty, orient the developer on the whole project. If it names a subsystem, directory,
+feature, or concept, focus the investigation there while explaining enough surrounding context to
+make the subsystem understandable.
 
-The optional argument narrows the focus: `$ARGUMENTS`
+Inspect the repository before answering. Cover what applies:
 
-- If it is empty → give a whole-project orientation.
-- If it names a subsystem, directory, feature, or concept (e.g. `auth`, `the rendering pipeline`, `CI`) → deep-dive that area instead of the whole repo.
+- the project's purpose and users;
+- architecture, key modules, and important control/data flow;
+- languages, frameworks, and dependencies;
+- how the developer can build, test, lint, and run it;
+- where different kinds of changes live;
+- local conventions and recent relevant history;
+- assumptions or documentation gaps you could not verify.
 
-## How to explore (read-only)
+Use a small diagram only when it makes a real relationship clearer. Do not propose an unrelated
+refactor during orientation.
 
-Investigate the codebase before you explain. Draw on:
-
-- `README`, `docs/`, wikis, and any architecture/design notes.
-- The directory layout — top-level structure and how modules are organized.
-- Package/build manifests (e.g. `package.json`, `pyproject.toml`, `Cargo.toml`, `go.mod`, `Gemfile`, `pom.xml`) to learn the tech stack and dependencies.
-- How to build, test, lint, and run — scripts, Makefiles, CI config.
-- `CONTRIBUTING`, code owners, issue/PR templates, and style/lint config for the project's conventions.
-- `git log` / `git remote` for recent activity and where the project lives.
-
-## What to deliver
-
-Explain, in clear prose, as much of the following as applies:
-
-1. **What the project is and its goals** — the problem it solves and who it's for.
-2. **Architecture & key modules** — the big pieces, how they fit together, and the main data/control flow. A simple diagram (ASCII/mermaid) is welcome.
-3. **Tech stack** — languages, frameworks, notable libraries, and why they matter here.
-4. **How to build, test, and run** — the actual commands, and how to verify a change works.
-5. **Where things live** — a map from "I want to change X" to "look in these directories."
-6. **Conventions** — coding style, commit/PR norms, testing expectations.
-
-Close with **"Where to look next"** — 2–4 concrete starting points — and a couple of reflective questions that check the contributor's understanding and nudge them to explore on their own.
+End with "Where to look next" containing 2–4 concrete starting points, then ask one diagnostic or
+transfer question grounded in the project. If `AskUserQuestion` fits, shuffle 2–4 plausible options;
+otherwise ask the developer to explain one important flow in their own words.

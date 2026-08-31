@@ -1,0 +1,8 @@
+interface:
+  display_name: "DuckTutor"
+  short_description: "Understand and own every AI-assisted change"
+  brand_color: "#F4B942"
+  default_prompt: "Use $tutor to guide this change first; edit only in a later request after I engage with the explanation and approve each scoped operation."
+
+policy:
+  allow_implicit_invocation: true

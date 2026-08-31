@@ -1,19 +1,24 @@
 {
   "version": "1.0",
   "name": "ducktutor",
+  "description": "Socratic tutoring tools with relevant research and learning-gated, manually approved scoped edits.",
+  "owner": {
+    "name": "Gabriel Quaresma",
+    "email": "j.quaresmasantos98@gmail.com"
+  },
   "plugins": [
     {
       "name": "ducktutor",
       "source": ".",
       "displayName": "DuckTutor",
-      "description": "A rubber-duck tutor for open source contributors. Teaches, explains, and reviews — but never writes the solution for you.",
-      "version": "0.1.0",
+      "description": "A Socratic AI pair tutor with relevant web research and learning-gated, manually approved scoped edits.",
+      "version": "0.4.1",
       "author": {
         "name": "Gabriel Quaresma",
-        "email": "gabriel.quaresma@codeminer42.com"
+        "email": "j.quaresmasantos98@gmail.com"
       },
-      "homepage": "https://github.com/<user>/ducktutor-plugin",
-      "repository": "https://github.com/<user>/ducktutor-plugin",
+      "homepage": "https://github.com/joaoGabriel55/DuckTutor",
+      "repository": "https://github.com/joaoGabriel55/DuckTutor",
       "license": "MIT",
       "keywords": [
         "education",
@@ -21,7 +26,9 @@
         "open-source",
         "code-review",
         "mentorship",
-        "anti-brain-rot"
+        "anti-brain-rot",
+        "socratic-learning",
+        "manual-approval"
       ]
     }
   ]

@@ -1,76 +1,161 @@
 # 🦆 DuckTutor
 
-**A rubber-duck tutor for open source contributors**
+**A Socratic AI pair tutor that keeps the developer responsible for the code**
 
-DuckTutor helps you *understand* the project you're contributing to, *understand* the issue you're solving, and get *guided feedback* on your own work. It will happily explain a problem and even propose a solution approach — but it will **never write the code for you**.
+DuckTutor helps you understand a codebase, research relevant context, reason through an issue, and
+review what actually changed. It normally guides you while you edit. When you explicitly choose the
+manual implementation command, it may make the smallest scoped change, but every edit operation still
+requires your approval. Afterward, DuckTutor reviews the real diff and checks whether you can
+explain it.
 
-> 🧩 **Using a different AI coding tool?** Versions of DuckTutor for **Codex** and **Antigravity** are **coming soon** — same teach / explain / review workflow, same "never writes the code for you" rule.
+DuckTutor supports both **Claude Code** and **Codex** from the same repository and tutoring skill.
+
+The goal is less AI brainrot: use AI to accelerate learning and feedback without outsourcing your
+technical judgment.
+
+## The contract
+
+- DuckTutor reads and explains the project.
+- DuckTutor may research links and external facts supplied by the user or required by the task.
+- DuckTutor compares approaches and recommends the smallest adequate change.
+- DuckTutor may show one focused code chunk at a time for manual application.
+- Editing is available only after a relevant DuckTutor learning command in which you engaged with
+  the problem, followed by an explicit implementation request.
+- Every edit operation is manually approved; DuckTutor never enables automatic editing.
+- Only files directly required by the described problem or feature may be changed.
+- DuckTutor reviews the actual Git diff, not merely its earlier suggestion.
+- Every interaction ends with a purposeful question; completed changes get an explain-it-back gate
+  and an adaptive quiz.
+- DuckTutor never hides a write inside shell commands or expands into unrelated cleanup.
+
+> **Manual means manual:** DuckTutor's default-deny hook allows read/search tools and narrowly
+> validated Git inspection. Native file-edit tools always escalate to you for approval—even if your
+> host normally auto-accepts edits. Shell-based writes, arbitrary commands, subagents, external
+> mutation tools, and unknown future tools remain blocked.
 
 ## Why
 
-It's easy to let an AI write your patch, ship code you don't understand, and slowly rot your own skills. DuckTutor is the opposite of that. It's a tutor, not an autopilot:
+Code that runs can still be a poor engineering decision. DuckTutor asks you to reconsider a change
+when you cannot explain it, the diff is larger than the problem, it adds abstractions without
+evidence, or it makes the system harder to reason about.
 
-- ✅ It teaches you the codebase, explains issues, and proposes solution *approaches* with the reasoning behind them.
-- ❌ It never hands you the finished code — no solution snippets, no diffs, no "paste this."
+Manual copy/paste alone does not create understanding, so DuckTutor combines it with prediction,
+review of the applied change, observable verification, active recall, and explain-it-back.
 
-You write 100% of the code. DuckTutor makes sure you know *why*.
+The approach is inspired by:
 
-## Commands
+- [When I reject AI code even if it works](https://vinibrasil.com/when-i-reject-ai-code-even-if-it-works/)
+  by Vinicius Brasil.
+- [Demonkey](https://github.com/geeksilva97/demonkey), especially its constrained Socratic loop,
+  progressive hints, developer-owned code, local verification, and adaptive consolidation quizzes.
+
+## Claude Code commands
 
 ### `/ducktutor:teach-me [optional topic or subsystem]`
-Orients you on the project: what it does and its goals, the architecture, the tech stack, how to build/test/run, where things live, and its conventions. Pass a topic to deep-dive one subsystem.
 
-```
+Build a grounded mental model of the whole project or one subsystem, then answer a diagnostic
+question.
+
+```text
 /ducktutor:teach-me
-/ducktutor:teach-me auth
+/ducktutor:teach-me authentication
 ```
 
 ### `/ducktutor:explain <issue URL or problem description>`
-Reads an issue (URL or pasted markdown), explains the problem in depth, then proposes a solution approach — files to touch, steps in prose, and the reasoning/trade-offs. Never as implementation code.
 
-```
+Understand the problem, compare approaches, answer a prediction question, and receive minimal code
+chunks to apply manually. DuckTutor inspects your real diff after each applied stage.
+
+```text
 /ducktutor:explain https://github.com/org/repo/issues/123
-/ducktutor:explain "Users can submit the form twice on a slow connection..."
+/ducktutor:explain "Users can submit the form twice on a slow connection"
 ```
 
 ### `/ducktutor:review [optional file or path]`
-Reviews your changes and guides you to fix issues yourself. With no argument it inspects your working git diff; pass a path to review a specific file. Feedback and reasoning only — never the corrected code.
 
-```
+Review the current working diff or a selected target for correctness, scope, abstractions,
+reasonability, tests, and project fit. Clean reviews finish with explain-it-back and a quiz.
+
+```text
 /ducktutor:review
 /ducktutor:review src/api/handlers.ts
 ```
 
+### `/ducktutor:hint [problem, error, file, or symbol]`
+
+Get the smallest useful nudge. Hints escalate from a code pointer and leading question to a partial
+skeleton or focused copyable snippet only when needed.
+
+### `/ducktutor:checkpoint [optional file, path, or concept]`
+
+Test your understanding of an applied change using its actual diff and behavior.
+
+### `/ducktutor:implement <problem or feature and optional file scope>`
+
+Continue from a relevant completed `/teach-me`, `/explain`, `/review`, `/hint`, or `/checkpoint`
+interaction in the current conversation. You must have engaged with that earlier step; an unrelated
+or merely invoked command does not unlock editing. DuckTutor then names the exact files, asks you to
+approve the scope and every edit operation, and never touches unrelated files.
+
+## Codex skill
+
+Codex can load the tutor automatically when a request matches its purpose, or you can invoke it
+explicitly:
+
+```text
+$ducktutor:tutor Teach me how this repository works.
+$ducktutor:tutor Explain this issue and guide me through the smallest adequate fix.
+$ducktutor:tutor Implement this feature with manual approval for every scoped edit operation.
+$ducktutor:tutor Review my current diff and check whether I understand it.
+```
+
+The same scope and approval hook protects Codex tool calls. Codex asks you to review and trust plugin
+hooks before enabling them; the protection is inactive until the hook is trusted.
+
 ## Installation
 
-**From the marketplace** (this repo is its own marketplace):
+### Claude Code
+
+From this repository's marketplace:
 
 ```bash
-claude plugin marketplace add <user>/ducktutor-plugin
+claude plugin marketplace add joaoGabriel55/DuckTutor
 claude plugin install ducktutor@ducktutor
 ```
 
-**For local development / trying it out:**
+For local development:
 
 ```bash
-claude --plugin-dir ./ducktutor-plugin
+claude --plugin-dir ./DuckTutor
 ```
 
-Then use `/reload-plugins` to pick up changes without restarting.
+Use `/reload-plugins` after editing plugin files. Use `/hooks` to confirm DuckTutor's `PreToolUse`
+guards are loaded.
 
-## The one rule
+### Codex
 
-> DuckTutor may **propose and fully explain** a solution, but it must **never implement it for you**. The contributor writes every line. If you ask it to "just write the code," it will decline and explain the approach instead — so *you* can write it.
+Install DuckTutor from a configured marketplace using the Codex plugin browser (`/plugins`) or the
+CLI:
 
-## Other AI coding tools
+```bash
+codex plugin marketplace add <marketplace-source>
+codex plugin add ducktutor@<marketplace-name>
+```
 
-DuckTutor starts on Claude Code, but it isn't meant to stay there. Versions for other AI coding assistants are on the way — same tutor, same `teach-me` / `explain` / `review` workflow, and the same "propose and explain, never implement" rule. Only the packaging changes to fit each tool.
+Start a new Codex thread after installation so the tutor skill and hook are loaded. The repository
+contains the Codex package manifest at `.codex-plugin/plugin.json`; adding it to a personal or team
+marketplace is intentionally separate from editing this source repository.
 
-| Tool | Status |
-| --- | --- |
-| **Claude Code** | ✅ Available (this repo) |
-| **Codex** | 🚧 Coming soon |
-| **Antigravity** | 🚧 Coming soon |
+## Typical loop
+
+1. Start with `/ducktutor:explain` in Claude Code or `$ducktutor:tutor` in Codex.
+2. Reason through the prediction gate and answer the command's learning question.
+3. Apply the suggestion yourself, or continue in the same conversation with
+   `/ducktutor:implement` and approve its exact file scope and each edit.
+4. Run the requested test or observation command yourself.
+5. Run `/ducktutor:review` on the actual changes.
+6. Explain the load-bearing decisions and complete the checkpoint.
+7. Revise or reject the change when understanding or evidence is weak.
 
 ## Contributing
 

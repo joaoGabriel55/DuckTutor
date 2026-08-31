@@ -1,0 +1,16 @@
+{
+  "description": "Keep DuckTutor scoped with a default-deny tool gate and manual approval for every edit operation.",
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "\"${CLAUDE_PLUGIN_ROOT}\"/hooks/guard.sh tool"
+          }
+        ]
+      }
+    ]
+  }
+}
