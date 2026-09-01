@@ -1,7 +1,7 @@
 ---
 description: After a relevant DuckTutor learning command, implement the smallest scoped change with manual approval for every edit.
 argument-hint: "<problem or feature and optional file scope>"
-allowed-tools: Read Glob Grep WebFetch WebSearch Edit Write AskUserQuestion Skill Bash(git status *) Bash(git diff *) Bash(git log *) Bash(git show *) Bash(git branch --show-current) Bash(git rev-parse *) Bash(git ls-files *)
+allowed-tools: Read Glob Grep WebFetch WebSearch Edit Write AskUserQuestion Skill Bash(ls *) Bash(cat *) Bash(find *) Bash(gh pr view *) Bash(git config *) Bash(git status *) Bash(git diff *) Bash(git log *) Bash(git show *) Bash(git branch --show-current) Bash(git rev-parse *) Bash(git ls-files *)
 ---
 
 # DuckTutor · implement

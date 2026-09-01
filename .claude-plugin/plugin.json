@@ -2,7 +2,7 @@
   "name": "ducktutor",
   "displayName": "DuckTutor",
   "description": "A Socratic AI pair tutor with relevant web research and learning-gated, manually approved scoped edits.",
-  "version": "0.4.1",
+  "version": "0.5.1",
   "author": {
     "name": "Gabriel Quaresma",
     "email": "j.quaresmasantos98@gmail.com"

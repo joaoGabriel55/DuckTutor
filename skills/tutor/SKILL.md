@@ -44,6 +44,28 @@ research, or current external information is materially needed to solve their re
 search tied to that content or problem, prefer primary sources, cite web-derived claims, and stop
 when enough evidence exists. Never browse merely to widen the task.
 
+When native repository tools are insufficient, you may use the guard-approved `ls`, `cat`, and
+inspection-only `find`, `git config`, `gh issue view`, or `gh pr view` shell commands. Do not use
+their mutation-capable forms or combine them with other shell operations.
+
+## MCP verification boundary
+
+You may use MCP tools already exposed by the host when they are materially useful for understanding
+or verifying the requested behavior. Treat every MCP call as capability-bearing: its name or
+description does not prove that it is read-only, and the host's permission decision does not expand
+the developer's stated scope.
+
+Browser interaction against a local, development, or explicitly identified test environment is
+allowed when it exercises the relevant feature or fix. Keep navigation, clicks, form input,
+console/network inspection, snapshots, and screenshots proportional to that scenario. Do not use an
+MCP tool to edit source files or bypass the editing boundary. Do not purchase, publish, deploy, send
+messages, upload sensitive files, alter production data, or mutate unrelated external systems
+without a separate explicit request that includes that action.
+
+Use MCP results as observable evidence: report the target, relevant actions, expected behavior, and
+actual behavior. If no suitable MCP tool is available, say what remains unverified and give the
+developer a focused manual observation instead.
+
 ## Anti-brainrot standard
 
 Treat working code as insufficient. Recommend accepting a change only when:
@@ -77,8 +99,10 @@ Adapt the depth to the task, but preserve this order:
    explicitly request implementation, agree the exact file scope and use only individually approved
    native edits. Then inspect the actual file or Git diff; do not review a suggestion as though it
    were the applied change.
-6. **Review and verify** — examine surrounding code and the real diff. Tell the developer which
-   command to run and how to interpret it. The developer runs mutation-capable build/test commands.
+6. **Review and verify** — examine surrounding code and the real diff. Use relevant host-provided
+   MCP tools for scoped end-to-end observation when available. Tell the developer which remaining
+   command to run and how to interpret it; the developer runs mutation-capable shell build/test
+   commands.
 7. **Consolidate** — after the behavior works, require explain-it-back and a change-grounded quiz.
 
 Do not force a prediction gate before harmless orientation or when the developer only asked for a

@@ -15,6 +15,10 @@ Every user-facing change must preserve these rules:
 6. A completed change requires explain-it-back and a diff-grounded checkpoint.
 7. Passing tests never substitutes for understanding.
 8. Web research stays tied to user-supplied content or facts materially needed by the task.
+9. Host-configured MCP tools may collect scoped verification evidence but never bypass source-edit
+   approval or authorize unrelated external mutations.
+10. Shell access stays inspection-only: filesystem listing/search, Git configuration reads, and
+    GitHub issue or pull-request viewing must reject mutation-capable variants.
 
 The central behavioral contract lives in `skills/tutor/SKILL.md`. Keep commands focused on their
 entry-point-specific behavior instead of copying the entire contract into each prompt.
@@ -122,8 +126,16 @@ Then smoke-test the learning loop on both platforms:
    or editing, then recommends `/ducktutor:explain`.
 9. Run an unrelated DuckTutor command and confirm it still does not unlock implementation for a
    different feature.
-10. Supply a documentation URL and confirm DuckTutor can fetch or search it without enabling a
-   mutation-capable external tool.
+10. Supply a documentation URL and confirm DuckTutor can fetch or search it without enabling an
+    unrelated external tool.
+11. Configure a disposable MCP test server and confirm a canonical `mcp__<server>__<tool>` call
+    reaches the host's normal permission flow while malformed MCP names remain blocked.
+12. With a browser MCP connected to a disposable local application, confirm DuckTutor can exercise
+    one relevant flow and report the target, actions, expected result, and observed result.
+13. Ask DuckTutor to use an MCP filesystem tool to edit source or mutate an unrelated external
+    system and confirm the tutor refuses even when the host exposes that tool.
+14. Confirm `ls`, `cat`, safe `find`, read-only `git config`, and `gh pr view` pass the guard while
+    `find -delete`, `find -exec`, and Git configuration writes remain blocked.
 
 When changing quiz behavior, sample multiple runs. The correct option must not occupy a predictable
 position, and the wording must be grounded in the actual change rather than recited from a template.

@@ -24,14 +24,20 @@ technical judgment.
 - Every edit operation is manually approved; DuckTutor never enables automatic editing.
 - Only files directly required by the described problem or feature may be changed.
 - DuckTutor reviews the actual Git diff, not merely its earlier suggestion.
+- DuckTutor may use host-configured MCP tools for scoped end-to-end observation and testing.
+- MCP calls remain subject to the host's server and per-tool permission policy and never bypass the
+  source-editing boundary.
 - Every interaction ends with a purposeful question; completed changes get an explain-it-back gate
   and an adaptive quiz.
 - DuckTutor never hides a write inside shell commands or expands into unrelated cleanup.
 
 > **Manual means manual:** DuckTutor's default-deny hook allows read/search tools and narrowly
 > validated Git inspection. Native file-edit tools always escalate to you for approval—even if your
-> host normally auto-accepts edits. Shell-based writes, arbitrary commands, subagents, external
-> mutation tools, and unknown future tools remain blocked.
+> host normally auto-accepts edits. Canonically named MCP tools defer to your host's MCP permission
+> policy so DuckTutor can perform scoped verification; they cannot be used to edit source files.
+> The shell gate also permits `ls`, `cat`, inspection-only `find`, read-only `git config`, and
+> `gh issue view`/`gh pr view`. Shell-based writes, arbitrary commands, subagents, and unknown future
+> tools remain blocked.
 
 ## Why
 
@@ -112,6 +118,20 @@ $ducktutor:tutor Review my current diff and check whether I understand it.
 The same scope and approval hook protects Codex tool calls. Codex asks you to review and trust plugin
 hooks before enabling them; the protection is inactive until the hook is trusted.
 
+## MCP-assisted verification
+
+DuckTutor can use MCP servers that you have already configured in Claude Code or Codex. It does not
+bundle, install, or require a particular server: browser automation, developer tools, and other test
+adapters remain your choice. When a host exposes a tool using the canonical
+`mcp__<server>__<tool>` name, DuckTutor's guard defers that call to the host's own server and
+per-tool permission settings.
+
+During a scoped feature, fix, or review, DuckTutor may use an available MCP tool to navigate a local
+or test application, exercise the relevant flow, inspect page state, console output, or network
+activity, and capture snapshots or screenshots. It reports the target, actions, expectation, and
+observed result. MCP tools never replace the learning gate, native edit approval, actual diff
+review, or explain-it-back checkpoint.
+
 ## Installation
 
 ### Claude Code
@@ -152,7 +172,8 @@ marketplace is intentionally separate from editing this source repository.
 2. Reason through the prediction gate and answer the command's learning question.
 3. Apply the suggestion yourself, or continue in the same conversation with
    `/ducktutor:implement` and approve its exact file scope and each edit.
-4. Run the requested test or observation command yourself.
+4. Let DuckTutor perform scoped MCP-assisted end-to-end observation when a suitable tool is
+   available, and run any remaining shell test command yourself.
 5. Run `/ducktutor:review` on the actual changes.
 6. Explain the load-bearing decisions and complete the checkpoint.
 7. Revise or reject the change when understanding or evidence is weak.

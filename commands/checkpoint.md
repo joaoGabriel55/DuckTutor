@@ -1,7 +1,7 @@
 ---
 description: Check whether you understand an applied change using the actual diff and observed behavior.
 argument-hint: "[optional file, path, or concept]"
-allowed-tools: Read Glob Grep WebFetch WebSearch AskUserQuestion Skill Bash(git status *) Bash(git diff *) Bash(git log *) Bash(git show *) Bash(git branch --show-current) Bash(git rev-parse *) Bash(git ls-files *)
+allowed-tools: Read Glob Grep WebFetch WebSearch AskUserQuestion Skill Bash(ls *) Bash(cat *) Bash(find *) Bash(gh pr view *) Bash(git config *) Bash(git status *) Bash(git diff *) Bash(git log *) Bash(git show *) Bash(git branch --show-current) Bash(git rev-parse *) Bash(git ls-files *)
 ---
 
 # DuckTutor · checkpoint

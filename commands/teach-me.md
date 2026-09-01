@@ -1,7 +1,7 @@
 ---
 description: Build a grounded mental model of this project or a selected subsystem, then check your understanding.
 argument-hint: "[optional topic or subsystem]"
-allowed-tools: Read Glob Grep WebFetch WebSearch AskUserQuestion Skill Bash(git status *) Bash(git diff *) Bash(git log *) Bash(git show *) Bash(git branch --show-current) Bash(git rev-parse *) Bash(git remote *) Bash(git ls-files *)
+allowed-tools: Read Glob Grep WebFetch WebSearch AskUserQuestion Skill Bash(ls *) Bash(cat *) Bash(find *) Bash(gh pr view *) Bash(git config *) Bash(git status *) Bash(git diff *) Bash(git log *) Bash(git show *) Bash(git branch --show-current) Bash(git rev-parse *) Bash(git remote *) Bash(git ls-files *)
 ---
 
 # DuckTutor · teach-me

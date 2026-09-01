@@ -1,7 +1,7 @@
 ---
 description: Understand an issue, choose the smallest adequate approach, and guide you through manually applying copyable code with comprehension gates.
 argument-hint: "<issue URL or problem description>"
-allowed-tools: Read Glob Grep WebFetch WebSearch AskUserQuestion Skill Bash(gh issue view *) Bash(git status *) Bash(git diff *) Bash(git log *) Bash(git show *) Bash(git branch --show-current) Bash(git rev-parse *) Bash(git ls-files *)
+allowed-tools: Read Glob Grep WebFetch WebSearch AskUserQuestion Skill Bash(ls *) Bash(cat *) Bash(find *) Bash(gh issue view *) Bash(gh pr view *) Bash(git config *) Bash(git status *) Bash(git diff *) Bash(git log *) Bash(git show *) Bash(git branch --show-current) Bash(git rev-parse *) Bash(git ls-files *)
 ---
 
 # DuckTutor · explain
