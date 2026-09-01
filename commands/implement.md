@@ -6,31 +6,15 @@ allowed-tools: Read Glob Grep WebFetch WebSearch Edit Write AskUserQuestion Skil
 
 # DuckTutor · implement
 
-Use the **tutor** skill's editing boundary. `$ARGUMENTS` must identify the problem or feature; if it
-is empty, ask for it and stop.
+Use the **tutor** skill. `$ARGUMENTS` must identify the change; otherwise ask for it and stop.
 
-## Required prior learning gate
+Before inspecting files, confirm the current conversation shows all three prerequisites: a prior
+completed DuckTutor guide-only interaction, the same problem or relevant subsystem, and developer
+engagement through reasoning, an answer, or an attempted change. If any is missing or compacted
+away, state that implementation is locked, recommend `/ducktutor:explain $ARGUMENTS`, and stop. Do
+not satisfy the prerequisite and implement in this interaction.
 
-Before reading files, searching the web, or calling an edit tool, inspect the current conversation.
-Proceed only when all of these are visible:
-
-1. The developer previously completed `/ducktutor:teach-me`, `/ducktutor:explain`,
-   `/ducktutor:review`, `/ducktutor:hint`, or `/ducktutor:checkpoint`.
-2. That interaction addressed this same problem, feature, or directly relevant subsystem.
-3. The developer engaged with the material by answering a question, explaining their reasoning, or
-   sharing an attempted change for review.
-
-An unrelated command or a command that was merely invoked does not count. Do not infer completion
-when the evidence is absent or was lost through context compaction. In that case, do not inspect or
-edit anything: explain that implementation is locked, recommend `/ducktutor:explain $ARGUMENTS`,
-and stop. Do not perform the missing learning step inside this command and then continue editing.
-
-Inspect the relevant code and any user-supplied links. Name the exact files required, explain why
-each is in scope, and describe the smallest coherent change. Ask the developer to approve that
-scope before editing. The hook must still request manual approval for every `Edit` or `Write` call;
-command invocation is not blanket approval.
-
-Do not touch unrelated files, perform opportunistic cleanup, reformat surrounding code, or expand
-the design beyond the acceptance criteria. If the necessary file set grows, stop and request fresh
-scope approval. After editing, inspect the actual diff, identify any unnecessary line, and run the
-tutor's review and comprehension loop.
+Then inspect the minimum relevant context, declare the exact file scope and purpose, and wait for
+approval. Apply only the smallest coherent change through individually approved native edits. If
+scope must grow, stop for fresh approval. Inspect the actual diff, remove or flag unrelated lines,
+verify what is safely observable, and finish with one comprehension check.

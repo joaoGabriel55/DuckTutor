@@ -1,7 +1,7 @@
 {
   "name": "ducktutor",
-  "version": "0.5.1",
-  "description": "A Socratic AI pair tutor with relevant web research and learning-gated, manually approved scoped edits.",
+  "version": "0.5.2",
+  "description": "A concise Socratic pair tutor with scoped verification and learning-gated, manually approved edits.",
   "author": {
     "name": "Gabriel Quaresma",
     "email": "j.quaresmasantos98@gmail.com",
@@ -23,7 +23,7 @@
   "interface": {
     "displayName": "DuckTutor",
     "shortDescription": "Understand and own every AI-assisted change",
-    "longDescription": "Explore code and relevant sources, reason about the smallest adequate solution, engage with the explanation, then optionally approve tightly scoped edits in a later request and prove understanding through diff review and adaptive questions.",
+    "longDescription": "Get concise, grounded guidance; approve scoped edits only after engaging; then verify the real diff and your understanding.",
     "developerName": "Gabriel Quaresma",
     "category": "Productivity",
     "capabilities": [
@@ -33,10 +33,10 @@
     ],
     "websiteURL": "https://github.com/joaoGabriel55/DuckTutor",
     "defaultPrompt": [
-      "Teach me how this codebase works without changing files.",
-      "Explain this issue and guide me through a minimal fix.",
-      "First guide me through this feature, then implement it only after I engage with the explanation.",
-      "Review my diff and quiz me on the changes."
+      "Teach me this codebase concisely without changing files.",
+      "Explain this issue and guide a minimal fix.",
+      "Guide this feature, then implement only after I engage.",
+      "Review my diff and check my understanding."
     ],
     "brandColor": "#F4B942"
   }

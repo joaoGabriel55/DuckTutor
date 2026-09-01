@@ -2,11 +2,9 @@
 
 **A Socratic AI pair tutor that keeps the developer responsible for the code**
 
-DuckTutor helps you understand a codebase, research relevant context, reason through an issue, and
-review what actually changed. It normally guides you while you edit. When you explicitly choose the
-manual implementation command, it may make the smallest scoped change, but every edit operation still
-requires your approval. Afterward, DuckTutor reviews the real diff and checks whether you can
-explain it.
+DuckTutor gives concise guidance for understanding a codebase, reasoning through an issue, and
+reviewing what changed. It normally guides you while you edit. Explicit implementation requests may
+apply the smallest scoped change, with your approval for every edit.
 
 DuckTutor supports both **Claude Code** and **Codex** from the same repository and tutoring skill.
 
@@ -17,8 +15,9 @@ technical judgment.
 
 - DuckTutor reads and explains the project.
 - DuckTutor may research links and external facts supplied by the user or required by the task.
-- DuckTutor compares approaches and recommends the smallest adequate change.
-- DuckTutor may show one focused code chunk at a time for manual application.
+- DuckTutor recommends the smallest adequate change and mentions alternatives only when they matter.
+- DuckTutor is concise by default and expands when complexity, risk, or your request requires it.
+- DuckTutor may show focused code for manual application.
 - Editing is available only after a relevant DuckTutor learning command in which you engaged with
   the problem, followed by an explicit implementation request.
 - Every edit operation is manually approved; DuckTutor never enables automatic editing.
@@ -27,8 +26,8 @@ technical judgment.
 - DuckTutor may use host-configured MCP tools for scoped end-to-end observation and testing.
 - MCP calls remain subject to the host's server and per-tool permission policy and never bypass the
   source-editing boundary.
-- Every interaction ends with a purposeful question; completed changes get an explain-it-back gate
-  and an adaptive quiz.
+- DuckTutor asks at most one question when it advances the task; completed changes get one
+  change-grounded comprehension check by default.
 - DuckTutor never hides a write inside shell commands or expands into unrelated cleanup.
 
 > **Manual means manual:** DuckTutor's default-deny hook allows read/search tools and narrowly
@@ -59,8 +58,8 @@ The approach is inspired by:
 
 ### `/ducktutor:teach-me [optional topic or subsystem]`
 
-Build a grounded mental model of the whole project or one subsystem, then answer a diagnostic
-question.
+Build a concise mental model of the whole project or one subsystem, with a diagnostic question when
+it helps.
 
 ```text
 /ducktutor:teach-me
@@ -69,8 +68,8 @@ question.
 
 ### `/ducktutor:explain <issue URL or problem description>`
 
-Understand the problem, compare approaches, answer a prediction question, and receive minimal code
-chunks to apply manually. DuckTutor inspects your real diff after each applied stage.
+Understand the problem, choose the smallest approach, reason through one prediction when the design
+warrants it, and receive focused code to apply manually. DuckTutor then inspects the real diff.
 
 ```text
 /ducktutor:explain https://github.com/org/repo/issues/123
@@ -80,7 +79,7 @@ chunks to apply manually. DuckTutor inspects your real diff after each applied s
 ### `/ducktutor:review [optional file or path]`
 
 Review the current working diff or a selected target for correctness, scope, abstractions,
-reasonability, tests, and project fit. Clean reviews finish with explain-it-back and a quiz.
+reasonability, tests, and project fit. Clean reviews use one change-grounded comprehension check.
 
 ```text
 /ducktutor:review
@@ -130,7 +129,7 @@ During a scoped feature, fix, or review, DuckTutor may use an available MCP tool
 or test application, exercise the relevant flow, inspect page state, console output, or network
 activity, and capture snapshots or screenshots. It reports the target, actions, expectation, and
 observed result. MCP tools never replace the learning gate, native edit approval, actual diff
-review, or explain-it-back checkpoint.
+review, or comprehension check.
 
 ## Installation
 
@@ -169,7 +168,7 @@ marketplace is intentionally separate from editing this source repository.
 ## Typical loop
 
 1. Start with `/ducktutor:explain` in Claude Code or `$ducktutor:tutor` in Codex.
-2. Reason through the prediction gate and answer the command's learning question.
+2. Reason through one prediction gate when the change has a meaningful design choice.
 3. Apply the suggestion yourself, or continue in the same conversation with
    `/ducktutor:implement` and approve its exact file scope and each edit.
 4. Let DuckTutor perform scoped MCP-assisted end-to-end observation when a suitable tool is

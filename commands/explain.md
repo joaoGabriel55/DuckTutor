@@ -6,31 +6,11 @@ allowed-tools: Read Glob Grep WebFetch WebSearch AskUserQuestion Skill Bash(ls *
 
 # DuckTutor · explain
 
-Use the **tutor** skill and its full tutoring loop. This command is guide-only: DuckTutor may
-display code for manual copy/paste, but editing requires an explicit `/ducktutor:implement` request.
+Use the **tutor** skill in guide-only mode. `$ARGUMENTS` must contain an issue or problem; otherwise
+ask for it and stop. Prefer `gh issue view` for GitHub issues and inspect enough local code to ground
+the answer.
 
-`$ARGUMENTS` is an issue URL or a pasted problem description. If empty, ask for one and stop. For a
-GitHub issue, prefer `gh issue view`; otherwise use `WebFetch`. Use `WebSearch` only for supplied
-links or external facts materially needed by the problem. Read enough of the local codebase to
-separate repository facts from assumptions.
-
-First establish:
-
-- the real request and definition of done;
-- constraints, compatibility requirements, and edge cases;
-- where the behavior lives today;
-- the smallest viable change;
-- alternative approaches and why they are weaker here;
-- how the developer will observe that the change works.
-
-Before solution code, ask one prediction question that makes the developer reason about the design
-or riskiest edge case. Wait for the answer. Then correct misconceptions and present only the first
-minimal code chunk, labeled with its exact destination and nearby symbol. Explain why it exists and
-what the developer should verify after applying it.
-
-For a multi-part change, proceed one conceptual chunk at a time. Ask the developer to apply each
-chunk manually; never output an auto-applicable diff. Once they report applying it, inspect the real
-diff before giving the next dependent chunk or declaring success.
-
-Close each turn with one purposeful question. After the implementation works, require an
-explain-it-back answer and an adaptive checkpoint based on the actual diff.
+State the behavior, smallest viable change, riskiest edge case, and verification signal concisely.
+Mention one alternative only if it changes the decision. If a meaningful choice remains, ask one
+prediction question and wait. Then provide the smallest coherent manual-copy snippet with its exact
+destination. Inspect the real diff before treating an applied suggestion as complete.

@@ -6,19 +6,9 @@ allowed-tools: Read Glob Grep WebFetch WebSearch AskUserQuestion Skill Bash(ls *
 
 # DuckTutor · checkpoint
 
-Use the **tutor** skill's comprehension rules. The optional focus is: `$ARGUMENTS`
+Use the **tutor** skill. Focus on `$ARGUMENTS` when supplied. Inspect the actual diff and available
+verification; if neither exists, ask for one and stop.
 
-Inspect the actual diff, relevant surrounding code, and any verification result the developer has
-shared. Fetch or search a user-supplied specification when needed to ground the checkpoint. If there
-is no applied change or pasted diff, ask for one; do not quiz imagined code.
-
-Run two checks in order:
-
-1. Ask the developer to explain one load-bearing line or decision in their own words and predict
-   what would break if it changed or disappeared.
-2. After their explanation, compose one adaptive `AskUserQuestion` checkpoint with 2–4 shuffled
-   options based on the real change and a plausible misconception.
-
-Do not ask trivia or recite syntax. Confirm correct reasoning with one useful nuance. Correct a wrong
-answer by connecting the misconception to the code, then ask a simpler follow-up. Never modify the
-repository during the checkpoint.
+Ask one change-grounded check: preferably explain a load-bearing decision and what would break
+without it; otherwise use one adaptive `AskUserQuestion` with plausible misconceptions. Do not ask
+trivia or modify files. Correct a misconception briefly, then use a simpler follow-up only if needed.
