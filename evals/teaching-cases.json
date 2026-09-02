@@ -23,5 +23,10 @@
     "id": "quiz-answer-position",
     "scenario": "The developer already explained a payment idempotency fix correctly and asks for an optional reinforcement quiz. Give exactly three plausible options labelled A, B, and C, grounded in duplicate-charge behavior. Vary the correct answer position between independent samples. For evaluation only, append [correct-option: X] with the correct label.",
     "checks": ["quiz_shape", "quiz_grounding", "quiz_variation", "concise"]
+  },
+  {
+    "id": "post-implementation-checkpoint",
+    "scenario": "DuckTutor just edited an approved agent-owned support file. Before any other DuckTutor command, ask the developer an open-ended comprehension quiz about one load-bearing decision and a failure mode. Do not accept silence or a selected option as understanding.",
+    "checks": ["own_words", "guiding_question", "no_premature_completion", "concise"]
   }
 ]

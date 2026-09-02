@@ -1,0 +1,127 @@
+#!/usr/bin/env bash
+
+set -uo pipefail
+
+ROOT="$(cd "$(dirname "$0")/.." && pwd)"
+HARNESS="$ROOT/scripts/command-harness.sh"
+STATE="$ROOT/scripts/learning-state.sh"
+POST_EDIT="$ROOT/hooks/post-edit.sh"
+PROMPT_GATE="$ROOT/hooks/prompt-gate.sh"
+PROJECT="$(mktemp -d "${TMPDIR:-/tmp}/ducktutor-harness.XXXXXX")"
+FAILURES=0
+
+cleanup() {
+  rm -rf "$PROJECT"
+}
+trap cleanup EXIT
+
+git -C "$PROJECT" init -q
+git -C "$PROJECT" config user.name DuckTutor-Test
+git -C "$PROJECT" config user.email test@ducktutor.invalid
+git -C "$PROJECT" commit --allow-empty -qm initial
+
+run_harness() {
+  DUCKTUTOR_PROJECT_DIR="$PROJECT" "$HARNESS" "$@"
+}
+
+expect_success() {
+  local name="$1"
+  shift
+  if "$@" >/dev/null 2>&1; then printf 'PASS harness: %s\n' "$name"; else
+    printf 'FAIL harness: %s\n' "$name"
+    FAILURES=$((FAILURES + 1))
+  fi
+}
+
+expect_failure() {
+  local name="$1"
+  shift
+  if "$@" >/dev/null 2>&1; then
+    printf 'FAIL harness rejected: %s\n' "$name"
+    FAILURES=$((FAILURES + 1))
+  else printf 'PASS harness rejected: %s\n' "$name"; fi
+}
+
+expect_failure "implement requires a prior DuckTutor command" run_harness enter implement
+expect_success "guide command records engagement" run_harness enter explain
+expect_success "prior command unlocks implement" run_harness enter implement
+
+DUCKTUTOR_PROJECT_DIR="$PROJECT" "$STATE" begin "harness task" >/dev/null
+DUCKTUTOR_PROJECT_DIR="$PROJECT" "$STATE" phase predicted >/dev/null
+DUCKTUTOR_PROJECT_DIR="$PROJECT" "$STATE" scope learner:src/app.js agent:test/app.test.js >/dev/null
+
+state_after_begin="$(run_harness show)"
+if STATE_JSON="$state_after_begin" node -e '
+  const state = JSON.parse(process.env.STATE_JSON);
+  if (!state.engagedCommands.includes("explain") || !state.engagedCommands.includes("implement")) process.exit(1);
+  if (state.activeCommand !== "implement") process.exit(1);
+'; then printf 'PASS harness: task begin preserves command engagement\n'; else
+  printf 'FAIL harness: task begin preserves command engagement\n'
+  FAILURES=$((FAILURES + 1))
+fi
+
+failed_post_output="$(printf '{"cwd":"%s","hook_event_name":"PostToolUse","tool_name":"Edit","tool_response":{"isError":true}}' "$PROJECT" | DUCKTUTOR_PROJECT_DIR="$PROJECT" "$POST_EDIT" 2>/dev/null || true)"
+state_after_failed_edit="$(run_harness show)"
+if STATE_JSON="$state_after_failed_edit" node -e 'const state = JSON.parse(process.env.STATE_JSON); process.exit(state.checkpointRequired ? 1 : 0)' && [[ -z "$failed_post_output" ]]; then
+  printf 'PASS harness: failed edit does not require a checkpoint\n'
+else
+  printf 'FAIL harness: failed edit does not require a checkpoint\n'
+  FAILURES=$((FAILURES + 1))
+fi
+
+post_output="$(printf '{"cwd":"%s","hook_event_name":"PostToolUse","tool_name":"Edit","tool_response":{"ok":true}}' "$PROJECT" | DUCKTUTOR_PROJECT_DIR="$PROJECT" "$POST_EDIT" 2>/dev/null || true)"
+checkpoint_state="$(run_harness show)"
+if STATE_JSON="$checkpoint_state" POST_JSON="$post_output" node -e '
+  const state = JSON.parse(process.env.STATE_JSON);
+  const hook = JSON.parse(process.env.POST_JSON);
+  if (!state.checkpointRequired) process.exit(1);
+  if (!hook.hookSpecificOutput.additionalContext.includes("comprehension checkpoint")) process.exit(1);
+'; then printf 'PASS harness: successful edit requires a checkpoint\n'; else
+  printf 'FAIL harness: successful edit requires a checkpoint\n'
+  FAILURES=$((FAILURES + 1))
+fi
+
+blocked_prompt="$(printf '{"cwd":"%s","prompt":"/ducktutor:review"}' "$PROJECT" | DUCKTUTOR_PROJECT_DIR="$PROJECT" "$PROMPT_GATE" 2>/dev/null || true)"
+if [[ "$blocked_prompt" == *'"decision":"block"'* ]]; then
+  printf 'PASS harness: unanswered checkpoint blocks another DuckTutor command\n'
+else
+  printf 'FAIL harness: unanswered checkpoint blocks another DuckTutor command\n'
+  FAILURES=$((FAILURES + 1))
+fi
+
+checkpoint_prompt="$(printf '{"cwd":"%s","prompt":"/ducktutor:checkpoint"}' "$PROJECT" | DUCKTUTOR_PROJECT_DIR="$PROJECT" "$PROMPT_GATE" 2>/dev/null || true)"
+if [[ -z "$checkpoint_prompt" ]]; then printf 'PASS harness: checkpoint command remains available\n'; else
+  printf 'FAIL harness: checkpoint command remains available\n'
+  FAILURES=$((FAILURES + 1))
+fi
+
+codex_prompt="$(printf '{"cwd":"%s","prompt":"$ducktutor:tutor Review my changes"}' "$PROJECT" | DUCKTUTOR_PROJECT_DIR="$PROJECT" "$PROMPT_GATE" 2>/dev/null || true)"
+if [[ "$codex_prompt" == *'"decision":"block"'* ]]; then
+  printf 'PASS harness: unanswered checkpoint blocks Codex tutor re-entry\n'
+else
+  printf 'FAIL harness: unanswered checkpoint blocks Codex tutor re-entry\n'
+  FAILURES=$((FAILURES + 1))
+fi
+
+embedded_slash_prompt="$(printf '{"cwd":"%s","prompt":"Please run /ducktutor:review now"}' "$PROJECT" | DUCKTUTOR_PROJECT_DIR="$PROJECT" "$PROMPT_GATE" 2>/dev/null || true)"
+embedded_skill_prompt="$(printf '{"cwd":"%s","prompt":"Please use $ducktutor:tutor to review my changes"}' "$PROJECT" | DUCKTUTOR_PROJECT_DIR="$PROJECT" "$PROMPT_GATE" 2>/dev/null || true)"
+if [[ "$embedded_slash_prompt" == *'"decision":"block"'* && "$embedded_skill_prompt" == *'"decision":"block"'* ]]; then
+  printf 'PASS harness: embedded DuckTutor invocations cannot bypass checkpoint lock\n'
+else
+  printf 'FAIL harness: embedded DuckTutor invocations cannot bypass checkpoint lock\n'
+  FAILURES=$((FAILURES + 1))
+fi
+
+expect_failure "entry gate blocks review while unanswered" run_harness enter review
+expect_success "entry gate allows checkpoint" run_harness enter checkpoint
+expect_failure "checkpoint cannot clear without confirmation" run_harness checkpoint-pass
+expect_failure "pending checkpoint cannot be erased" env DUCKTUTOR_PROJECT_DIR="$PROJECT" "$STATE" clear
+expect_success "confirmed understanding clears checkpoint" run_harness checkpoint-pass developer-confirmed
+expect_success "commands resume after checkpoint" run_harness enter review
+
+if (( FAILURES > 0 )); then
+  printf '%s command-harness test(s) failed\n' "$FAILURES"
+  exit 1
+fi
+
+printf 'All command-harness tests passed\n'

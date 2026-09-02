@@ -92,7 +92,10 @@ fresh="$(run_state show)"
 assert_json "descendant commit preserves state" 'value.stale === false' "$fresh"
 
 expect_success "record learner attempt" run_state phase attempted
+expect_success "require post-implementation checkpoint" run_state checkpoint require
 expect_success "record verification" run_state phase verified
+expect_failure "pending checkpoint blocks explanation" run_state phase explained developer-confirmed
+expect_success "record checkpoint answer" run_state checkpoint pass developer-confirmed
 expect_failure "explanation requires confirmation" run_state phase explained
 expect_success "record explanation" run_state phase explained developer-confirmed
 

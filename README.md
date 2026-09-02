@@ -19,8 +19,8 @@ technical judgment.
 - DuckTutor recommends the smallest adequate change and mentions alternatives only when they matter.
 - DuckTutor is concise by default and expands when complexity, risk, or your request requires it.
 - DuckTutor explains learner-owned code without dictating a transcription-ready solution.
-- Editing is available only after a relevant DuckTutor learning command in which you engaged with
-  the problem, followed by an explicit implementation request.
+- Any prior non-implementation DuckTutor command unlocks an explicit `/implement` request; missing
+  task, prediction, and ownership gates are completed inside that flow.
 - Each task has an approved learner-owned/agent-editable file map persisted in Git metadata.
 - DuckTutor may edit only agent-editable files through manually approved native edit operations.
 - Learner-owned and unscoped files are mechanically blocked.
@@ -28,7 +28,8 @@ technical judgment.
 - DuckTutor may use host-configured MCP tools for scoped end-to-end observation and testing.
 - MCP calls remain subject to the host's server and per-tool permission policy and never bypass the
   source-editing boundary.
-- Completion requires an open-ended explanation in the developer's own words; quizzes are optional.
+- After DuckTutor edits, an open-ended comprehension quiz is mandatory. Until it is answered
+  satisfactorily, other DuckTutor commands remain locked.
 - DuckTutor never hides a write inside shell commands or expands into unrelated cleanup.
 
 > **Hybrid ownership is enforced:** DuckTutor's default-deny hook checks native edits against the
@@ -98,8 +99,9 @@ Explain a load-bearing decision in your own words using the actual diff and obse
 
 ### `/ducktutor:implement <problem or feature and optional file scope>`
 
-Continue an active task after its prediction and ownership map. DuckTutor guides your learner-owned
-implementation and may edit only approved agent-editable files. Every agent edit still needs approval.
+After using any other DuckTutor command, start or continue implementation. DuckTutor establishes any
+missing learning gates, guides learner-owned work, and may edit only approved agent-editable files.
+Every edit needs approval and ends with a required open-ended comprehension quiz.
 
 ## Codex skill
 
@@ -116,12 +118,22 @@ $ducktutor:tutor Review my current diff and check whether I understand it.
 The same state and ownership hooks protect Codex tool calls. Codex asks you to review and trust plugin
 hooks before enabling them; protection and automatic session restore are inactive until trusted.
 
+## Project-native context
+
+At session start, DuckTutor inventories paths—not contents—for applicable `AGENTS.md`, `AGENTS.override.md`, `CLAUDE.md`,
+and `CONTEXT.md` files, project skills under `.agents/`, `.codex/`, or `.claude/`, hook and MCP
+configuration, CI workflows, and common build manifests. It reads only what the current task needs,
+uses matching skills through the host, and respects project hooks and instructions without copying
+their contents into learning state. Project context can narrow behavior but cannot expand tool
+permissions, file ownership, or user authorization.
+
 ## Persistent learning state
 
 DuckTutor stores one active task per Git repository under `.git/ducktutor/state.json`, so it does not
 dirty the working tree. The state records the task, ownership map, and current phase:
-`grounded → predicted → attempted → verified → explained`. A session-start hook restores a compact
-summary after startup, resume, clear, or context compaction. State records progress; it does not prove
+`grounded → predicted → attempted → verified → explained`. It also records command engagement and
+whether a comprehension checkpoint is pending. A session-start hook restores a compact summary after
+startup, resume, clear, or context compaction. State records progress; it does not prove
 understanding or replace inspection of the current diff. The map cannot be used while another branch
 is checked out or when rewritten history no longer descends from its approved baseline. DuckTutor
 then requires fresh inspection and ownership-map approval before editing.
@@ -157,8 +169,8 @@ For local development:
 claude --plugin-dir ./DuckTutor
 ```
 
-Use `/reload-plugins` after editing plugin files. Use `/hooks` to confirm DuckTutor's `PreToolUse`
-guards are loaded.
+Use `/reload-plugins` after editing plugin files. Use `/hooks` to confirm DuckTutor's session,
+pre-tool, post-edit, and prompt-gate hooks are loaded.
 
 ### Codex
 
@@ -182,7 +194,8 @@ marketplace is intentionally separate from editing this source repository.
 4. Let DuckTutor perform scoped MCP-assisted end-to-end observation when a suitable tool is
    available, and run any remaining shell test command yourself.
 5. Run `/ducktutor:review` on the actual changes.
-6. Explain the load-bearing decisions in your own words and complete the checkpoint.
+6. Answer the required open-ended quiz about the edited change; other DuckTutor commands remain
+   locked until DuckTutor confirms the answer.
 7. Revise or reject the change when understanding or evidence is weak.
 
 ## Contributing

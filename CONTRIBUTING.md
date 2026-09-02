@@ -11,7 +11,8 @@ Every user-facing change must preserve these rules:
 3. Suggestions lead with the smallest adequate change and explain only decision-relevant trade-offs.
 4. Reviews inspect the actual applied diff and surrounding code.
 5. Responses are concise by default and expand only for requested depth, complexity, or risk.
-6. Completion requires an open-ended explanation in the developer's own words; quizzes are optional.
+6. Agent edits require an open-ended comprehension quiz; its unanswered checkpoint blocks every
+   other DuckTutor command.
 7. Passing tests never substitutes for understanding.
 8. Web research stays tied to user-supplied content or facts materially needed by the task.
 9. Host-configured MCP tools may collect scoped verification evidence; MCP file mutation is denied
@@ -20,6 +21,10 @@ Every user-facing change must preserve these rules:
     GitHub issue or pull-request viewing must reject mutation-capable variants.
 11. Ownership approval cannot be used on another branch or non-descendant HEAD and must not be reused
     through symbolic-link, hard-link, patch-move, notebook, shell, or MCP aliases.
+12. Any prior DuckTutor command unlocks implement; the deterministic harness establishes remaining
+    learning gates without redirecting the developer.
+13. Project instructions, skills, hooks, workflows, and manifests are discovered by path and used
+    selectively without copying their contents into persistent state.
 
 The central behavioral contract lives in `skills/tutor/SKILL.md`. Keep commands focused on their
 entry-point-specific behavior instead of copying the entire contract into each prompt.
@@ -47,11 +52,15 @@ DuckTutor/
 ├── hooks/
 │   ├── hooks.json
 │   ├── guard.sh
+│   ├── post-edit.sh
+│   ├── prompt-gate.sh
 │   └── session-start.sh
 ├── evals/
 │   └── teaching-cases.json
 ├── scripts/
 │   ├── learning-state.sh
+│   ├── command-harness.sh
+│   ├── project-context.sh
 │   ├── eval-teaching.mjs
 │   └── test-*.sh
 ├── README.md
@@ -61,9 +70,11 @@ DuckTutor/
 
 Claude Code command files contain YAML frontmatter followed by their prompt. `$ARGUMENTS` contains
 command input. Codex loads the shared `skills/tutor/SKILL.md` through `.codex-plugin/plugin.json`.
-The state module persists one task and its file ownership map under Git metadata. The guard denies
+The state module persists command engagement, one task, its ownership map, and checkpoint lock under
+Git metadata. The deterministic harness gates command entry. The guard denies
 learner-owned and unscoped edits, approval-gates agent-editable native edits, and blocks mutation
-bypasses. The session-start hook restores a compact state summary after resume or compaction.
+bypasses. Hooks inventory project-native context, restore state, require post-edit comprehension, and
+block other DuckTutor commands until the checkpoint is answered.
 
 ## Developing locally
 
@@ -106,7 +117,9 @@ Run the deterministic contract tests:
 
 ```bash
 scripts/test-guard.sh
+scripts/test-command-harness.sh
 scripts/test-learning-state.sh
+scripts/test-project-context.sh
 scripts/test-teaching-contract.sh
 scripts/test-teaching-eval.sh
 ```
@@ -145,10 +158,10 @@ Then smoke-test the learning loop on both platforms:
 6. Try `/ducktutor:hint` repeatedly and confirm it escalates without dictating learner-owned code.
 7. Run `/ducktutor:implement`; confirm learner-owned and unscoped edits are denied while each
    agent-editable native edit asks for approval.
-8. In a fresh conversation, run `/ducktutor:implement` first and confirm it stops before inspecting
-   or editing, then recommends `/ducktutor:explain`.
-9. Run an unrelated DuckTutor command and confirm it still does not unlock implementation for a
-   different feature.
+8. In a fresh repository, confirm `/ducktutor:implement` is initially locked; run any other DuckTutor
+   command, then confirm implement opens and establishes missing task gates in-place.
+9. After an agent-owned edit, skip the quiz and confirm every other DuckTutor command is blocked;
+   answer it correctly and confirm commands resume.
 10. Supply a documentation URL and confirm DuckTutor can fetch or search it without enabling an
     unrelated external tool.
 11. Configure a disposable MCP test server and confirm a canonical `mcp__<server>__<tool>` call
@@ -159,6 +172,8 @@ Then smoke-test the learning loop on both platforms:
     system and confirm the guard denies it even when the host exposes that tool.
 14. Confirm `ls`, `cat`, safe `find`, read-only `git config`, and `gh pr view` pass the guard while
     `find -delete`, `find -exec`, and Git configuration writes remain blocked.
+15. Add nested project instructions, local skills, hooks, workflows, and a build manifest; confirm the
+    context inventory returns paths only and DuckTutor reads only the relevant entries.
 
 Resume or compact an active task and confirm its task, phase, and ownership map return. When using a
 quiz, ground it in the actual change and vary the correct option's position; it never replaces the

@@ -1,12 +1,13 @@
 ---
 description: Review your actual changes for correctness, proportionality, unnecessary abstraction, and understanding—without modifying them.
 argument-hint: "[optional file or path]"
-allowed-tools: Read Glob Grep WebFetch WebSearch AskUserQuestion Skill Bash("${CLAUDE_PLUGIN_ROOT}/scripts/learning-state.sh" *) Bash(ls *) Bash(cat *) Bash(find *) Bash(gh pr view *) Bash(git config *) Bash(git status *) Bash(git diff *) Bash(git log *) Bash(git show *) Bash(git branch --show-current) Bash(git rev-parse *) Bash(git ls-files *)
+allowed-tools: Read Glob Grep WebFetch WebSearch AskUserQuestion Skill Bash("${CLAUDE_PLUGIN_ROOT}/scripts/command-harness.sh" *) Bash("${CLAUDE_PLUGIN_ROOT}/scripts/project-context.sh" *) Bash("${CLAUDE_PLUGIN_ROOT}/scripts/learning-state.sh" *) Bash(ls *) Bash(cat *) Bash(find *) Bash(gh pr view *) Bash(git config *) Bash(git status *) Bash(git diff *) Bash(git log *) Bash(git show *) Bash(git branch --show-current) Bash(git rev-parse *) Bash(git ls-files *)
 ---
 
 # DuckTutor · review
 
-Use the **tutor** skill and never edit. Read persisted learning state, then review `$ARGUMENTS` or the
+Use the **tutor** skill and never edit. First run `command-harness.sh enter review`; stop if it rejects
+entry. Read persisted learning state, then review `$ARGUMENTS` or the
 current staged and unstaged diff with enough surrounding code. If no change exists, ask for one.
 
 Check correctness, requirements, failure modes, tests, scope, abstractions, project fit, and

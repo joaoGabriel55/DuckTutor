@@ -19,6 +19,7 @@ expect_text() {
 
 for file in "$ROOT"/commands/*.md; do
   expect_text "$(basename "$file") can access learning state" 'learning-state\.sh' "$file"
+  expect_text "$(basename "$file") enters deterministic harness" 'command-harness\.sh.*enter' "$file"
 done
 
 for file in "$ROOT"/commands/*.md; do
@@ -33,6 +34,8 @@ for file in "$ROOT"/commands/*.md; do
 done
 
 expect_text "session-start hook configured" 'SessionStart' "$ROOT/hooks/hooks.json"
+expect_text "post-edit checkpoint hook configured" 'PostToolUse' "$ROOT/hooks/hooks.json"
+expect_text "pending-checkpoint prompt gate configured" 'UserPromptSubmit' "$ROOT/hooks/hooks.json"
 
 if node -e '
   const cases = require(process.argv[1]);
@@ -40,7 +43,8 @@ if node -e '
   const checks = new Set(cases.flatMap(entry => entry.checks));
   if (!ids.has("learner-owned-refusal") || !ids.has("explain-it-back-required") ||
       !ids.has("progressive-hint-after-failed-nudge") || !checks.has("no_code") ||
-      !ids.has("quiz-answer-position") || !checks.has("own_words") || !checks.has("phase_fit") ||
+      !ids.has("quiz-answer-position") || !ids.has("post-implementation-checkpoint") ||
+      !checks.has("own_words") || !checks.has("phase_fit") ||
       !checks.has("stronger_hint") || !checks.has("quiz_variation") ||
       !checks.has("no_premature_completion")) process.exit(1);
 ' "$ROOT/evals/teaching-cases.json"; then

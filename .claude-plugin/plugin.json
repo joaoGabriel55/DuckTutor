@@ -1,8 +1,8 @@
 {
   "name": "ducktutor",
   "displayName": "DuckTutor",
-  "description": "A concise Socratic pair tutor with persistent learning state, hybrid file ownership, and scoped verification.",
-  "version": "0.6.0",
+  "description": "A concise Socratic pair tutor with project-native context, deterministic learning gates, and hybrid file ownership.",
+  "version": "0.7.0",
   "author": {
     "name": "Gabriel Quaresma",
     "email": "j.quaresmasantos98@gmail.com"

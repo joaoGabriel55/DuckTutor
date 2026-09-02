@@ -5,6 +5,8 @@ set -uo pipefail
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 GUARD="$ROOT/hooks/guard.sh"
 STATE="$ROOT/scripts/learning-state.sh"
+PROJECT_CONTEXT="$ROOT/scripts/project-context.sh"
+HARNESS="$ROOT/scripts/command-harness.sh"
 PROJECT="$(mktemp -d "${TMPDIR:-/tmp}/ducktutor-guard.XXXXXX")"
 OUTSIDE="$(mktemp -d "${TMPDIR:-/tmp}/ducktutor-outside.XXXXXX")"
 FAILURES=0
@@ -26,6 +28,7 @@ ln -s ../src/app.js "$PROJECT/test/app-link.js"
 ln "$PROJECT/src/app.js" "$PROJECT/test/app-hard.js"
 ln "$PROJECT/src/secret.js" "$PROJECT/test/unscoped-hard.js"
 ln -s "$OUTSIDE" "$PROJECT/linked"
+ln -s "$PROJECT" "$OUTSIDE/project-alias"
 
 guard() {
   DUCKTUTOR_PROJECT_DIR="$PROJECT" "$GUARD" "$@"
@@ -105,6 +108,14 @@ expect_command_asked() {
 
 expect_allowed "learning state read" "$STATE show"
 expect_allowed "learning state read through plugin variable" '"${CLAUDE_PLUGIN_ROOT}/scripts/learning-state.sh" show'
+expect_allowed "project context inventory" "$PROJECT_CONTEXT show"
+expect_allowed "project context inventory through plugin variable" '"${CLAUDE_PLUGIN_ROOT}/scripts/project-context.sh" show'
+expect_denied "unsupported project context command" "$PROJECT_CONTEXT scan"
+expect_allowed "command harness state read" "$HARNESS show"
+expect_allowed "command harness entry" "$HARNESS enter explain"
+expect_allowed "command harness checkpoint requirement" "$HARNESS checkpoint-require"
+expect_command_asked "confirmed checkpoint completion" "$HARNESS checkpoint-pass developer-confirmed"
+expect_denied "unsupported command harness action" "$HARNESS bypass"
 expect_command_asked "learning task begin" "$STATE begin guard-test"
 expect_command_asked "ownership map change" "$STATE scope learner:src/app.js agent:test/app.test.js"
 expect_allowed "learning phase advance" "$STATE phase attempted"
@@ -121,11 +132,21 @@ else
   FAILURES=$((FAILURES + 1))
 fi
 
+DUCKTUTOR_PROJECT_DIR="$PROJECT" "$HARNESS" enter explain >/dev/null
 DUCKTUTOR_PROJECT_DIR="$PROJECT" "$STATE" begin "guard ownership test" >/dev/null
 DUCKTUTOR_PROJECT_DIR="$PROJECT" "$STATE" phase predicted >/dev/null
 DUCKTUTOR_PROJECT_DIR="$PROJECT" "$STATE" scope learner:src/app.js agent:test/app.test.js agent:test/app-link.js agent:test/app-hard.js agent:test/unscoped-hard.js agent:docs/app.md agent:linked/outside.txt >/dev/null
 
 file_payload='{"tool_input":{"file_path":"test/app.test.js","content":"replacement"}}'
+file_output="$(printf '%s' "$file_payload" | guard file)"
+if [[ "$file_output" == *'"permissionDecision":"deny"'* ]]; then
+  printf 'PASS denied: edit outside active implement flow\n'
+else
+  printf 'FAIL denied: edit outside active implement flow\n'
+  FAILURES=$((FAILURES + 1))
+fi
+
+DUCKTUTOR_PROJECT_DIR="$PROJECT" "$HARNESS" enter implement >/dev/null
 file_output="$(printf '%s' "$file_payload" | guard file)"
 if [[ "$file_output" == *'"permissionDecision":"ask"'* ]]; then
     printf 'PASS asked: agent-owned file mutation\n'
@@ -139,6 +160,15 @@ if [[ "$subdirectory_output" == *'"permissionDecision":"ask"'* ]]; then
   printf 'PASS asked: ownership paths stay repository-relative from subdirectories\n'
 else
   printf 'FAIL asked: ownership paths stay repository-relative from subdirectories\n'
+  FAILURES=$((FAILURES + 1))
+fi
+
+alias_root_payload="$(FILE_PATH="$OUTSIDE/project-alias/test/app.test.js" node -e 'process.stdout.write(JSON.stringify({tool_input:{file_path:process.env.FILE_PATH,content:"replacement"}}))')"
+alias_root_output="$(printf '%s' "$alias_root_payload" | guard file)"
+if [[ "$alias_root_output" == *'"permissionDecision":"ask"'* ]]; then
+  printf 'PASS asked: canonical repository alias preserves approved ownership\n'
+else
+  printf 'FAIL asked: canonical repository alias preserves approved ownership\n'
   FAILURES=$((FAILURES + 1))
 fi
 

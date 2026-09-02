@@ -123,7 +123,7 @@ check_git_config() {
 }
 
 check_bash() {
-  local command state_script state_script_variable state_args state_action
+  local command state_script state_script_variable state_args state_action context_script context_script_variable harness_script harness_script_variable harness_args
   command="$(extract_field command 2>/dev/null || true)"
   if [[ -z "$command" ]]; then
     deny "DuckTutor could not verify this shell command as read-only, so it was blocked."
@@ -137,6 +137,36 @@ check_bash() {
 
   state_script="$ROOT/scripts/learning-state.sh"
   state_script_variable='"${CLAUDE_PLUGIN_ROOT}/scripts/learning-state.sh"'
+  context_script="$ROOT/scripts/project-context.sh"
+  context_script_variable='"${CLAUDE_PLUGIN_ROOT}/scripts/project-context.sh"'
+  harness_script="$ROOT/scripts/command-harness.sh"
+  harness_script_variable='"${CLAUDE_PLUGIN_ROOT}/scripts/command-harness.sh"'
+  case "$command" in
+    "$context_script show"|"\"$context_script\" show"|"$context_script_variable show")
+      return 0
+      ;;
+    "$context_script "*|"\"$context_script\" "*|"$context_script_variable "*)
+      deny "DuckTutor project context supports only its read-only show command."
+      ;;
+  esac
+  if [[ "$command" == "$harness_script"\ * ]]; then
+    harness_args="${command#"$harness_script" }"
+  elif [[ "$command" == \"$harness_script\"\ * ]]; then
+    harness_args="${command#\"$harness_script\" }"
+  elif [[ "$command" == "$harness_script_variable"\ * ]]; then
+    harness_args="${command#"$harness_script_variable" }"
+  else
+    harness_args=""
+  fi
+  if [[ -n "$harness_args" ]]; then
+    case "$harness_args" in
+      show|"enter teach-me"|"enter explain"|"enter review"|"enter hint"|"enter checkpoint"|"enter implement"|checkpoint-require) return 0 ;;
+      "checkpoint-pass developer-confirmed")
+        ask "DuckTutor wants to record that you answered the required comprehension checkpoint. Approve only after a satisfactory answer."
+        ;;
+      *) deny "DuckTutor blocked an unsupported command-harness action." ;;
+    esac
+  fi
   if [[ "$command" == "$state_script"\ * ]]; then
     state_args="${command#"$state_script" }"
   elif [[ "$command" == \"$state_script\"\ * ]]; then
@@ -216,7 +246,12 @@ check_native_edit() {
     const payload = JSON.parse(process.env.PAYLOAD_JSON || "{}");
     const state = JSON.parse(process.env.STATE_JSON);
     const tool = process.env.TOOL_NAME;
-    const project = path.resolve(state.repositoryRoot || process.env.PROJECT_DIR);
+    const project = fs.realpathSync(path.resolve(state.repositoryRoot || process.env.PROJECT_DIR));
+    const launchDirectory = path.resolve(process.env.PROJECT_DIR);
+    const realLaunchDirectory = fs.realpathSync(launchDirectory);
+    const launchRelative = path.relative(project, realLaunchDirectory);
+    let lexicalProject = launchDirectory;
+    for (const _ of launchRelative.split(path.sep).filter(Boolean)) lexicalProject = path.dirname(lexicalProject);
     const input = payload.tool_input || {};
 
     function finish(decision, reason) {
@@ -229,6 +264,9 @@ check_native_edit() {
     }
     if (state.stale) {
       finish("deny", `DuckTutor ownership approval is stale (${state.staleReason || "repository context changed"}). Start and approve the task again.`);
+    }
+    if (state.activeCommand !== "implement") {
+      finish("deny", "DuckTutor native edits require an active, harness-approved implement flow.");
     }
     if (!state.agentPaths.length) {
       finish("deny", "DuckTutor has no approved agent-editable files for this task.");
@@ -254,22 +292,37 @@ check_native_edit() {
     if (moves) finish("deny", "DuckTutor does not move or rename files through hybrid implementation mode.");
     if (!candidates.length) finish("deny", "DuckTutor could not identify every file targeted by this edit.");
 
-    function relativeProjectPath(candidate) {
+    function canonicalAbsolute(candidate) {
       const absolute = path.isAbsolute(candidate) ? path.resolve(candidate) : path.resolve(project, candidate);
+      const missing = [];
+      let existing = absolute;
+      while (!fs.existsSync(existing)) {
+        const parent = path.dirname(existing);
+        if (parent === existing) return absolute;
+        missing.unshift(path.basename(existing));
+        existing = parent;
+      }
+      return path.join(fs.realpathSync(existing), ...missing);
+    }
+
+    function relativeProjectPath(candidate) {
+      const absolute = canonicalAbsolute(candidate);
       const relative = path.relative(project, absolute).replaceAll(path.sep, "/");
       if (!relative || relative === ".." || relative.startsWith("../")) return null;
       return relative.replace(/^\.\//, "");
     }
 
-    function usesSymlink(candidate) {
+    function usesProjectSymlink(candidate) {
       const absolute = path.isAbsolute(candidate) ? path.resolve(candidate) : path.resolve(project, candidate);
-      const relative = path.relative(project, absolute);
-      if (relative === ".." || relative.startsWith(`..${path.sep}`)) return true;
-      let current = project;
-      for (const segment of relative.split(path.sep).filter(Boolean)) {
-        current = path.join(current, segment);
-        if (!fs.existsSync(current)) break;
-        if (fs.lstatSync(current).isSymbolicLink()) return true;
+      for (const root of [...new Set([project, lexicalProject])]) {
+        const relative = path.relative(root, absolute);
+        if (relative === ".." || relative.startsWith(`..${path.sep}`) || path.isAbsolute(relative)) continue;
+        let current = root;
+        for (const segment of relative.split(path.sep).filter(Boolean)) {
+          current = path.join(current, segment);
+          if (!fs.existsSync(current)) break;
+          if (fs.lstatSync(current).isSymbolicLink()) return true;
+        }
       }
       return false;
     }
@@ -278,11 +331,11 @@ check_native_edit() {
     if (normalized.some((candidate) => candidate === null)) {
       finish("deny", "DuckTutor blocks edits outside the active project.");
     }
-    if (candidates.some(usesSymlink)) {
+    if (candidates.some(usesProjectSymlink)) {
       finish("deny", "DuckTutor blocks edits through symbolic-link aliases.");
     }
     function hasHardLinkAlias(candidate) {
-      const absolute = path.isAbsolute(candidate) ? path.resolve(candidate) : path.resolve(project, candidate);
+      const absolute = canonicalAbsolute(candidate);
       if (!fs.existsSync(absolute)) return false;
       return fs.statSync(absolute).nlink > 1;
     }

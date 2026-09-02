@@ -40,13 +40,20 @@ const idle = {
   branch: null,
   baselineHead: null,
   explanationConfirmedAt: null,
+  engagedCommands: [],
+  activeCommand: null,
+  checkpointRequired: false,
+  checkpointRequestedAt: null,
+  checkpointCompletedAt: null,
   updatedAt: null,
   stale: false,
   staleReason: null,
 };
 
 function withFreshness(value) {
-  if (value.phase === "idle") return { ...value, stale: false, staleReason: null };
+  if (value.phase === "idle" && value.engagedCommands.length === 0 && !value.checkpointRequired) {
+    return { ...value, stale: false, staleReason: null };
+  }
   let staleReason = null;
   if (value.repositoryRoot !== repositoryRoot) {
     staleReason = "repository changed";
@@ -67,7 +74,12 @@ function readState() {
     if (value.schema !== 1 || !Array.isArray(value.learnerPaths) || !Array.isArray(value.agentPaths)) {
       fail("stored state has an unsupported shape");
     }
-    return withFreshness(value);
+    return withFreshness({
+      ...idle,
+      ...value,
+      engagedCommands: Array.isArray(value.engagedCommands) ? value.engagedCommands : [],
+      checkpointRequired: value.checkpointRequired === true,
+    });
   } catch (error) {
     if (error.code === "ENOENT") return { ...idle };
     if (error instanceof SyntaxError) fail("stored state is invalid JSON");
@@ -105,6 +117,8 @@ switch (command) {
     process.stdout.write(`${JSON.stringify(readState())}\n`);
     break;
   case "begin": {
+    const current = readState();
+    if (current.checkpointRequired) fail("complete the required comprehension checkpoint first");
     const task = args.join(" ").trim();
     if (!task || task.length > 200 || /[\u0000-\u001f\u007f]/.test(task)) {
       fail("begin requires a single-line task summary of at most 200 characters");
@@ -116,7 +130,56 @@ switch (command) {
       repositoryRoot,
       branch: currentBranch,
       baselineHead: currentHead,
+      engagedCommands: current.engagedCommands,
+      activeCommand: current.activeCommand,
+      checkpointCompletedAt: current.checkpointCompletedAt,
     });
+    break;
+  }
+  case "engage": {
+    const current = readState();
+    const entry = args[0];
+    const commands = ["teach-me", "explain", "review", "hint", "checkpoint", "implement"];
+    if (args.length !== 1 || !commands.includes(entry)) fail("engage requires a DuckTutor command name");
+    if (current.stale) fail(`state is stale: ${current.staleReason}; clear it before continuing`);
+    if (current.checkpointRequired && entry !== "checkpoint") {
+      fail("answer the required comprehension checkpoint before using another DuckTutor command");
+    }
+    if (entry === "implement" && !current.engagedCommands.some((command) => command !== "implement")) {
+      fail("run any other DuckTutor command before implement");
+    }
+    writeState({
+      ...current,
+      repositoryRoot: current.repositoryRoot || repositoryRoot,
+      branch: current.branch || currentBranch,
+      baselineHead: current.baselineHead ?? currentHead,
+      engagedCommands: [...new Set([...current.engagedCommands, entry])],
+      activeCommand: entry,
+    });
+    break;
+  }
+  case "checkpoint": {
+    const current = readState();
+    const action = args[0];
+    if (current.stale) fail(`state is stale: ${current.staleReason}`);
+    if (action === "require" && args.length === 1) {
+      if (!["predicted", "attempted", "verified"].includes(current.phase)) fail("an active implementation is required");
+      writeState({
+        ...current,
+        checkpointRequired: true,
+        checkpointRequestedAt: current.checkpointRequestedAt || new Date().toISOString(),
+      });
+    } else if (action === "pass" && args.length === 2 && args[1] === "developer-confirmed") {
+      if (!current.checkpointRequired) fail("no comprehension checkpoint is pending");
+      writeState({
+        ...current,
+        checkpointRequired: false,
+        checkpointRequestedAt: null,
+        checkpointCompletedAt: new Date().toISOString(),
+      });
+    } else {
+      fail("checkpoint requires either require or pass developer-confirmed");
+    }
     break;
   }
   case "scope": {
@@ -157,6 +220,9 @@ switch (command) {
       fail("phase requires a valid phase name; explained also requires developer-confirmed");
     }
     if (current.stale) fail(`state is stale: ${current.staleReason}`);
+    if (next === "explained" && current.checkpointRequired) {
+      fail("complete the required comprehension checkpoint before explained");
+    }
     const currentIndex = phases.indexOf(current.phase);
     const nextIndex = phases.indexOf(next);
     if (currentIndex < 0 || nextIndex !== currentIndex + 1) {
@@ -173,6 +239,7 @@ switch (command) {
     break;
   }
   case "clear":
+    if (readState().checkpointRequired) fail("complete the required comprehension checkpoint before clearing state");
     try {
       fs.unlinkSync(statePath);
     } catch (error) {
@@ -181,6 +248,6 @@ switch (command) {
     process.stdout.write(`${JSON.stringify(idle)}\n`);
     break;
   default:
-    fail("supported commands are show, begin, scope, phase, and clear");
+    fail("supported commands are show, begin, scope, phase, engage, checkpoint, and clear");
 }
 NODE
