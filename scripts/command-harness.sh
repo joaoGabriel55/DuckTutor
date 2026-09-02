@@ -23,8 +23,12 @@ case "$COMMAND" in
     [[ "$#" -eq 2 && "$2" == "developer-confirmed" ]] || exit 1
     DUCKTUTOR_PROJECT_DIR="${DUCKTUTOR_PROJECT_DIR:-$PWD}" "$STATE" checkpoint pass developer-confirmed
     ;;
+  checkpoint-abandon)
+    [[ "$#" -eq 2 && "$2" == "developer-confirmed" ]] || exit 1
+    DUCKTUTOR_PROJECT_DIR="${DUCKTUTOR_PROJECT_DIR:-$PWD}" "$STATE" checkpoint abandon developer-confirmed
+    ;;
   *)
-    printf 'DuckTutor harness: supported commands are show, enter, checkpoint-require, and checkpoint-pass\n' >&2
+    printf 'DuckTutor harness: supported commands are show, enter, checkpoint-require, checkpoint-pass, and checkpoint-abandon\n' >&2
     exit 1
     ;;
 esac

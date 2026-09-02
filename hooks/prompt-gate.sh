@@ -37,9 +37,11 @@ COMMAND="$(PROMPT_VALUE="$PROMPT" node -e '
 
 [[ -n "$COMMAND" && "$COMMAND" != "checkpoint" ]] || exit 0
 
-node -e '
+STATE_JSON="$STATE_JSON" node -e '
+  const state = JSON.parse(process.env.STATE_JSON);
+  const task = state.task ? ` for task ${JSON.stringify(state.task)}` : "";
   process.stdout.write(JSON.stringify({
     decision: "block",
-    reason: "DuckTutor is waiting for your comprehension-checkpoint answer. Continue with /ducktutor:checkpoint before using another DuckTutor command.",
+    reason: `DuckTutor has a pending comprehension checkpoint${task}. It persists across sessions. Run /ducktutor:checkpoint to answer, or /ducktutor:checkpoint --abandon to explicitly discard the task without claiming understanding.`,
   }) + "\n");
 '

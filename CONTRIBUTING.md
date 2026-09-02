@@ -27,8 +27,10 @@ Every user-facing change must preserve these rules:
     selectively without copying their contents into persistent state.
 14. Force-agent implementation requires prior tutoring and an explicit all-agent map; it never
     bypasses file scope, edit approval, verification, or comprehension gates.
-15. Explicit explain commands start fresh task state and every internal command uses its canonical
+15. Explicit start commands create fresh task state and every internal command uses its canonical
     plugin-root path; stale task maps and bare script names must never be reused.
+16. Checkpoints persist across sessions; explicit abandonment requires confirmation, records no
+    understanding, and clears only the abandoned task and ownership map.
 
 The central behavioral contract lives in `skills/tutor/SKILL.md`. Keep commands focused on their
 entry-point-specific behavior instead of copying the entire contract into each prompt.
@@ -44,6 +46,7 @@ DuckTutor/
 │   └── marketplace.json
 ├── commands/
 │   ├── teach-me.md
+│   ├── start.md
 │   ├── explain.md
 │   ├── review.md
 │   ├── hint.md
@@ -92,7 +95,7 @@ After changes:
 
 - Run `/reload-plugins`.
 - Open `/hooks` and confirm the DuckTutor `PreToolUse` guard appears.
-- Confirm all six `/ducktutor:*` commands appear with their argument hints.
+- Confirm all seven `/ducktutor:*` commands appear with their argument hints.
 
 ### Codex
 
@@ -169,19 +172,21 @@ Then smoke-test the learning loop on both platforms:
    approved all-agent map after another DuckTutor command without allowing unscoped edits.
 10. After an agent-owned edit, skip the quiz and confirm every other DuckTutor command is blocked;
    answer it correctly and confirm commands resume.
-11. Supply a documentation URL and confirm DuckTutor can fetch or search it without enabling an
+11. In a new session with a pending checkpoint, confirm the recovery message offers answer or
+    explicit abandonment. Confirm abandonment requires approval and never records understanding.
+12. Supply a documentation URL and confirm DuckTutor can fetch or search it without enabling an
     unrelated external tool.
-12. Configure a disposable MCP test server and confirm a canonical `mcp__<server>__<tool>` call
+13. Configure a disposable MCP test server and confirm a canonical `mcp__<server>__<tool>` call
     reaches the host's normal permission flow while malformed MCP names remain blocked.
-13. With a browser MCP connected to a disposable local application, confirm DuckTutor can exercise
+14. With a browser MCP connected to a disposable local application, confirm DuckTutor can exercise
     one relevant flow and report the target, actions, expected result, and observed result.
-14. Ask DuckTutor to use an MCP filesystem tool to edit source or mutate an unrelated external
+15. Ask DuckTutor to use an MCP filesystem tool to edit source or mutate an unrelated external
     system and confirm the guard denies it even when the host exposes that tool.
-15. Confirm `ls`, `cat`, safe `find`, read-only `git config`, and `gh pr view` pass the guard while
+16. Confirm `ls`, `cat`, safe `find`, read-only `git config`, and `gh pr view` pass the guard while
     `find -delete`, `find -exec`, and Git configuration writes remain blocked.
-16. Add nested project instructions, local skills, hooks, workflows, and a build manifest; confirm the
+17. Add nested project instructions, local skills, hooks, workflows, and a build manifest; confirm the
     context inventory returns paths only and DuckTutor reads only the relevant entries.
-17. Complete one task, then start an unrelated task; confirm the old task and ownership map are
+18. Complete one task, then start an unrelated task; confirm the old task and ownership map are
     retired. Confirm a pending checkpoint blocks this transition and bare harness names are denied.
 
 Resume or compact an active task and confirm its task, phase, and ownership map return. When using a

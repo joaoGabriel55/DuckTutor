@@ -120,6 +120,8 @@ expect_allowed "command harness forced implementation entry" "$HARNESS enter imp
 expect_denied "unknown command harness implementation flag" "$HARNESS enter implement --force"
 expect_allowed "command harness checkpoint requirement" "$HARNESS checkpoint-require"
 expect_command_asked "confirmed checkpoint completion" "$HARNESS checkpoint-pass developer-confirmed"
+expect_command_asked "confirmed checkpoint abandonment" "$HARNESS checkpoint-abandon developer-confirmed"
+expect_denied "unconfirmed checkpoint abandonment" "$HARNESS checkpoint-abandon"
 expect_denied "unsupported command harness action" "$HARNESS bypass"
 
 bare_harness_payload='{"tool_input":{"command":"command-harness.sh enter explain"}}'

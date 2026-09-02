@@ -164,6 +164,9 @@ check_bash() {
       "checkpoint-pass developer-confirmed")
         ask "DuckTutor wants to record that you answered the required comprehension checkpoint. Approve only after a satisfactory answer."
         ;;
+      "checkpoint-abandon developer-confirmed")
+        ask "DuckTutor wants to abandon the pending task without recording understanding. Approve only if you intend to discard that task and its ownership map."
+        ;;
       *) deny "DuckTutor blocked an unsupported command-harness action." ;;
     esac
   fi

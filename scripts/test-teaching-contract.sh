@@ -50,6 +50,7 @@ expect_text "session-start hook configured" 'SessionStart' "$ROOT/hooks/hooks.js
 expect_text "post-edit checkpoint hook configured" 'PostToolUse' "$ROOT/hooks/hooks.json"
 expect_text "pending-checkpoint prompt gate configured" 'UserPromptSubmit' "$ROOT/hooks/hooks.json"
 expect_text "implement exposes explicit force-agent mode" '--force-agent' "$ROOT/commands/implement.md" "$ROOT/skills/tutor/SKILL.md"
+expect_text "checkpoint exposes explicit abandonment" '--abandon' "$ROOT/commands/checkpoint.md" "$ROOT/skills/tutor/SKILL.md"
 
 if node -e '
   const cases = require(process.argv[1]);

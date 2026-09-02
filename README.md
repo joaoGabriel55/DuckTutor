@@ -35,6 +35,8 @@ technical judgment.
   source-editing boundary.
 - After DuckTutor edits, an open-ended comprehension quiz is mandatory. Until it is answered
   satisfactorily, other DuckTutor commands remain locked.
+- A pending task may be explicitly abandoned through `/checkpoint --abandon`; this records no
+  understanding and requires confirmation.
 - DuckTutor never hides a write inside shell commands or expands into unrelated cleanup.
 
 > **Hybrid ownership is enforced:** DuckTutor's default-deny hook checks native edits against the
@@ -109,9 +111,11 @@ reasonability, tests, and project fit. Clean reviews use one change-grounded com
 Get the smallest useful nudge. Hints escalate from a code pointer and leading question to a partial
 skeleton, without dictating learner-owned code.
 
-### `/ducktutor:checkpoint [optional file, path, or concept]`
+### `/ducktutor:checkpoint [--abandon | optional file, path, or concept]`
 
 Explain a load-bearing decision in your own words using the actual diff and observed behavior.
+Checkpoints persist across sessions. If the task is no longer relevant, `--abandon` shows which task
+will be discarded, requires confirmation, records the abandonment, and clears its ownership map.
 
 ### `/ducktutor:implement [--force-agent] [problem or feature and optional file scope]`
 
@@ -217,7 +221,8 @@ marketplace is intentionally separate from editing this source repository.
    available, and run any remaining shell test command yourself.
 5. Run `/ducktutor:review` on the actual changes.
 6. Answer the required open-ended quiz about the edited change; other DuckTutor commands remain
-   locked until DuckTutor confirms the answer.
+   locked until DuckTutor confirms the answer. Explicitly abandon an obsolete task through
+   `/ducktutor:checkpoint --abandon` instead of bypassing it with a new session.
 7. Revise or reject the change when understanding or evidence is weak.
 
 ## Contributing

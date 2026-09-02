@@ -1,16 +1,18 @@
 ---
-description: Check whether you understand an applied change using the actual diff and observed behavior.
-argument-hint: "[optional file, path, or concept]"
+description: Check understanding of an applied change or explicitly abandon its pending task.
+argument-hint: "[--abandon | optional file, path, or concept]"
 allowed-tools: Read Glob Grep WebFetch WebSearch AskUserQuestion Skill Bash("${CLAUDE_PLUGIN_ROOT}/scripts/command-harness.sh" *) Bash("${CLAUDE_PLUGIN_ROOT}/scripts/project-context.sh" *) Bash("${CLAUDE_PLUGIN_ROOT}/scripts/learning-state.sh" *) Bash(ls *) Bash(cat *) Bash(find *) Bash(gh pr view *) Bash(git config *) Bash(git status *) Bash(git diff *) Bash(git log *) Bash(git show *) Bash(git branch --show-current) Bash(git rev-parse *) Bash(git ls-files *)
 ---
 
 # DuckTutor · checkpoint
 
-Use the **tutor** skill. First run `"${CLAUDE_PLUGIN_ROOT}/scripts/command-harness.sh" enter checkpoint`. Read persisted state and
-inspect the actual diff and verification. Require
-the developer to explain one load-bearing decision and failure mode in their own words. Correct a
-misconception with a simpler follow-up. An adaptive quiz may reinforce this answer but cannot replace
-it. Only after a satisfactory open-ended explanation, request approval for
-`"${CLAUDE_PLUGIN_ROOT}/scripts/command-harness.sh" checkpoint-pass developer-confirmed`, then
+Use the **tutor** skill; run `"${CLAUDE_PLUGIN_ROOT}/scripts/command-harness.sh" enter checkpoint`.
+For exact argument `--abandon`, show the task and time, state that understanding is not
+recorded, and confirm. If confirmed, run
+`"${CLAUDE_PLUGIN_ROOT}/scripts/command-harness.sh" checkpoint-abandon developer-confirmed` and stop.
+
+Otherwise inspect state and diff. Ask for one load-bearing decision and failure mode
+in the developer's words; correct misconceptions. A quiz only reinforces. After a satisfactory answer,
+run `"${CLAUDE_PLUGIN_ROOT}/scripts/command-harness.sh" checkpoint-pass developer-confirmed`, then
 `"${CLAUDE_PLUGIN_ROOT}/scripts/learning-state.sh" phase explained developer-confirmed` when applicable.
-Never modify files.
+Never edit.

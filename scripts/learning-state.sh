@@ -46,6 +46,8 @@ const idle = {
   checkpointRequired: false,
   checkpointRequestedAt: null,
   checkpointCompletedAt: null,
+  lastAbandonedTask: null,
+  lastAbandonedAt: null,
   updatedAt: null,
   stale: false,
   staleReason: null,
@@ -135,6 +137,8 @@ switch (command) {
       activeCommand: current.activeCommand,
       implementationMode: current.implementationMode,
       checkpointCompletedAt: current.checkpointCompletedAt,
+      lastAbandonedTask: current.lastAbandonedTask,
+      lastAbandonedAt: current.lastAbandonedAt,
     });
     break;
   }
@@ -158,6 +162,8 @@ switch (command) {
         baselineHead: currentHead,
         engagedCommands: [...new Set([...current.engagedCommands, entry])],
         activeCommand: entry,
+        lastAbandonedTask: current.lastAbandonedTask,
+        lastAbandonedAt: current.lastAbandonedAt,
       });
       break;
     }
@@ -179,8 +185,21 @@ switch (command) {
   case "checkpoint": {
     const current = readState();
     const action = args[0];
-    if (current.stale) fail(`state is stale: ${current.staleReason}`);
-    if (action === "require" && args.length === 1) {
+    if (action === "abandon" && args.length === 2 && args[1] === "developer-confirmed") {
+      if (!current.checkpointRequired) fail("no comprehension checkpoint is pending");
+      writeState({
+        ...idle,
+        repositoryRoot,
+        branch: currentBranch,
+        baselineHead: currentHead,
+        engagedCommands: current.engagedCommands,
+        activeCommand: "checkpoint",
+        lastAbandonedTask: current.task,
+        lastAbandonedAt: new Date().toISOString(),
+      });
+    } else if (current.stale) {
+      fail(`state is stale: ${current.staleReason}`);
+    } else if (action === "require" && args.length === 1) {
       if (!["predicted", "attempted", "verified"].includes(current.phase)) fail("an active implementation is required");
       writeState({
         ...current,
@@ -196,7 +215,7 @@ switch (command) {
         checkpointCompletedAt: new Date().toISOString(),
       });
     } else {
-      fail("checkpoint requires either require or pass developer-confirmed");
+      fail("checkpoint requires require, pass developer-confirmed, or abandon developer-confirmed");
     }
     break;
   }

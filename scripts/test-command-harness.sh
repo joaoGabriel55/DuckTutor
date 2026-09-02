@@ -7,6 +7,7 @@ HARNESS="$ROOT/scripts/command-harness.sh"
 STATE="$ROOT/scripts/learning-state.sh"
 POST_EDIT="$ROOT/hooks/post-edit.sh"
 PROMPT_GATE="$ROOT/hooks/prompt-gate.sh"
+SESSION_HOOK="$ROOT/hooks/session-start.sh"
 PROJECT="$(mktemp -d "${TMPDIR:-/tmp}/ducktutor-harness.XXXXXX")"
 FAILURES=0
 
@@ -87,16 +88,30 @@ if STATE_JSON="$checkpoint_state" POST_JSON="$post_output" node -e '
 fi
 
 blocked_prompt="$(printf '{"cwd":"%s","prompt":"/ducktutor:review"}' "$PROJECT" | DUCKTUTOR_PROJECT_DIR="$PROJECT" "$PROMPT_GATE" 2>/dev/null || true)"
-if [[ "$blocked_prompt" == *'"decision":"block"'* ]]; then
-  printf 'PASS harness: unanswered checkpoint blocks another DuckTutor command\n'
+if [[ "$blocked_prompt" == *'"decision":"block"'* && "$blocked_prompt" == *'persists across sessions'* && "$blocked_prompt" == *'/ducktutor:checkpoint --abandon'* ]]; then
+  printf 'PASS harness: unanswered checkpoint blocks with cross-session recovery choices\n'
 else
-  printf 'FAIL harness: unanswered checkpoint blocks another DuckTutor command\n'
+  printf 'FAIL harness: unanswered checkpoint blocks with cross-session recovery choices\n'
   FAILURES=$((FAILURES + 1))
 fi
 
 checkpoint_prompt="$(printf '{"cwd":"%s","prompt":"/ducktutor:checkpoint"}' "$PROJECT" | DUCKTUTOR_PROJECT_DIR="$PROJECT" "$PROMPT_GATE" 2>/dev/null || true)"
 if [[ -z "$checkpoint_prompt" ]]; then printf 'PASS harness: checkpoint command remains available\n'; else
   printf 'FAIL harness: checkpoint command remains available\n'
+  FAILURES=$((FAILURES + 1))
+fi
+
+abandon_prompt="$(printf '{"cwd":"%s","prompt":"/ducktutor:checkpoint --abandon"}' "$PROJECT" | DUCKTUTOR_PROJECT_DIR="$PROJECT" "$PROMPT_GATE" 2>/dev/null || true)"
+if [[ -z "$abandon_prompt" ]]; then printf 'PASS harness: explicit checkpoint abandonment remains available\n'; else
+  printf 'FAIL harness: explicit checkpoint abandonment remains available\n'
+  FAILURES=$((FAILURES + 1))
+fi
+
+session_output="$(printf '{"source":"startup","cwd":"%s","hook_event_name":"SessionStart"}' "$PROJECT" | DUCKTUTOR_PROJECT_DIR="$PROJECT" "$SESSION_HOOK" 2>/dev/null || true)"
+if [[ "$session_output" == *'persists across sessions'* && "$session_output" == *'/ducktutor:checkpoint --abandon'* ]]; then
+  printf 'PASS harness: new session explains pending-checkpoint recovery\n'
+else
+  printf 'FAIL harness: new session explains pending-checkpoint recovery\n'
   FAILURES=$((FAILURES + 1))
 fi
 
@@ -144,6 +159,30 @@ else
   printf 'FAIL harness: new start preserves engagement but clears unrelated task state\n'
   FAILURES=$((FAILURES + 1))
 fi
+
+DUCKTUTOR_PROJECT_DIR="$PROJECT" "$STATE" begin "task to abandon" >/dev/null
+DUCKTUTOR_PROJECT_DIR="$PROJECT" "$STATE" phase predicted >/dev/null
+DUCKTUTOR_PROJECT_DIR="$PROJECT" "$STATE" scope learner:src/old.js agent:test/old.test.js >/dev/null
+expect_success "enter implementation before abandoned checkpoint" run_harness enter implement
+expect_success "require checkpoint before abandonment" run_harness checkpoint-require
+expect_success "enter checkpoint abandonment flow" run_harness enter checkpoint
+expect_failure "checkpoint abandonment requires confirmation" run_harness checkpoint-abandon
+expect_success "confirmed abandonment unlocks task state" run_harness checkpoint-abandon developer-confirmed
+
+abandoned_state="$(run_harness show)"
+if STATE_JSON="$abandoned_state" node -e '
+  const state = JSON.parse(process.env.STATE_JSON);
+  if (state.phase !== "idle" || state.task !== "" || state.checkpointRequired) process.exit(1);
+  if (state.learnerPaths.length || state.agentPaths.length || state.explanationConfirmedAt) process.exit(1);
+  if (state.lastAbandonedTask !== "task to abandon" || !state.lastAbandonedAt) process.exit(1);
+  if (!state.engagedCommands.includes("implement") || state.activeCommand !== "checkpoint") process.exit(1);
+'; then
+  printf 'PASS harness: abandonment is recorded without claiming understanding\n'
+else
+  printf 'FAIL harness: abandonment is recorded without claiming understanding\n'
+  FAILURES=$((FAILURES + 1))
+fi
+expect_success "commands resume after explicit abandonment" run_harness enter review
 
 if (( FAILURES > 0 )); then
   printf '%s command-harness test(s) failed\n' "$FAILURES"

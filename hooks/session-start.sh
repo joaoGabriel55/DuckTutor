@@ -67,6 +67,7 @@ STATE_JSON="$STATE_JSON" PROJECT_CONTEXT_JSON="$PROJECT_CONTEXT_JSON" node -e '
       `Learner-owned files: ${learner}`,
       `Agent-editable files: ${agent}`,
       `Comprehension checkpoint: ${state.checkpointRequired ? "required before another DuckTutor command" : "clear"}`,
+      ...(state.checkpointRequired ? ["This checkpoint persists across sessions. Use /ducktutor:checkpoint to answer or /ducktutor:checkpoint --abandon to explicitly discard the task."] : []),
       "Read the current diff before advancing state. Never edit learner-owned or unscoped files.",
     ].join("\n"));
   }
