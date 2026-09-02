@@ -1,7 +1,7 @@
 {
   "version": "1.0",
   "name": "ducktutor",
-  "description": "Socratic tutoring tools with relevant research and learning-gated, manually approved scoped edits.",
+  "description": "Socratic tutoring with persistent learning state and hybrid file ownership.",
   "owner": {
     "name": "Gabriel Quaresma",
     "email": "j.quaresmasantos98@gmail.com"
@@ -11,8 +11,8 @@
       "name": "ducktutor",
       "source": ".",
       "displayName": "DuckTutor",
-      "description": "A concise Socratic pair tutor with scoped verification and learning-gated, manually approved edits.",
-      "version": "0.5.2",
+      "description": "A concise Socratic pair tutor with persistent learning state, hybrid file ownership, and scoped verification.",
+      "version": "0.6.0",
       "author": {
         "name": "Gabriel Quaresma",
         "email": "j.quaresmasantos98@gmail.com"

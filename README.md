@@ -3,8 +3,9 @@
 **A Socratic AI pair tutor that keeps the developer responsible for the code**
 
 DuckTutor gives concise guidance for understanding a codebase, reasoning through an issue, and
-reviewing what changed. It normally guides you while you edit. Explicit implementation requests may
-apply the smallest scoped change, with your approval for every edit.
+reviewing what changed. For each task, it separates learner-owned files from agent-editable support
+files. You write the load-bearing implementation; explicit `/implement` requests may change only the
+approved support files, with your approval.
 
 DuckTutor supports both **Claude Code** and **Codex** from the same repository and tutoring skill.
 
@@ -17,23 +18,23 @@ technical judgment.
 - DuckTutor may research links and external facts supplied by the user or required by the task.
 - DuckTutor recommends the smallest adequate change and mentions alternatives only when they matter.
 - DuckTutor is concise by default and expands when complexity, risk, or your request requires it.
-- DuckTutor may show focused code for manual application.
+- DuckTutor explains learner-owned code without dictating a transcription-ready solution.
 - Editing is available only after a relevant DuckTutor learning command in which you engaged with
   the problem, followed by an explicit implementation request.
-- Every edit operation is manually approved; DuckTutor never enables automatic editing.
-- Only files directly required by the described problem or feature may be changed.
+- Each task has an approved learner-owned/agent-editable file map persisted in Git metadata.
+- DuckTutor may edit only agent-editable files through manually approved native edit operations.
+- Learner-owned and unscoped files are mechanically blocked.
 - DuckTutor reviews the actual Git diff, not merely its earlier suggestion.
 - DuckTutor may use host-configured MCP tools for scoped end-to-end observation and testing.
 - MCP calls remain subject to the host's server and per-tool permission policy and never bypass the
   source-editing boundary.
-- DuckTutor asks at most one question when it advances the task; completed changes get one
-  change-grounded comprehension check by default.
+- Completion requires an open-ended explanation in the developer's own words; quizzes are optional.
 - DuckTutor never hides a write inside shell commands or expands into unrelated cleanup.
 
-> **Manual means manual:** DuckTutor's default-deny hook allows read/search tools and narrowly
-> validated Git inspection. Native file-edit tools always escalate to you for approval—even if your
-> host normally auto-accepts edits. Canonically named MCP tools defer to your host's MCP permission
-> policy so DuckTutor can perform scoped verification; they cannot be used to edit source files.
+> **Hybrid ownership is enforced:** DuckTutor's default-deny hook checks native edits against the
+> active ownership map. Agent-editable files still require approval; learner-owned and unscoped files
+> are denied. Browser/test MCP tools remain available, MCP file mutation is denied, and unknown MCP
+> capabilities require approval.
 > The shell gate also permits `ls`, `cat`, inspection-only `find`, read-only `git config`, and
 > `gh issue view`/`gh pr view`. Shell-based writes, arbitrary commands, subagents, and unknown future
 > tools remain blocked.
@@ -44,8 +45,8 @@ Code that runs can still be a poor engineering decision. DuckTutor asks you to r
 when you cannot explain it, the diff is larger than the problem, it adds abstractions without
 evidence, or it makes the system harder to reason about.
 
-Manual copy/paste alone does not create understanding, so DuckTutor combines it with prediction,
-review of the applied change, observable verification, active recall, and explain-it-back.
+Copying code does not create understanding, so DuckTutor combines learner-written implementation
+with prediction, review of the applied change, observable verification, and explain-it-back.
 
 The approach is inspired by:
 
@@ -68,8 +69,8 @@ it helps.
 
 ### `/ducktutor:explain <issue URL or problem description>`
 
-Understand the problem, choose the smallest approach, reason through one prediction when the design
-warrants it, and receive focused code to apply manually. DuckTutor then inspects the real diff.
+Understand the problem, choose the smallest approach, answer one meaningful prediction, and approve
+which files you will write versus which support files DuckTutor may edit.
 
 ```text
 /ducktutor:explain https://github.com/org/repo/issues/123
@@ -89,18 +90,16 @@ reasonability, tests, and project fit. Clean reviews use one change-grounded com
 ### `/ducktutor:hint [problem, error, file, or symbol]`
 
 Get the smallest useful nudge. Hints escalate from a code pointer and leading question to a partial
-skeleton or focused copyable snippet only when needed.
+skeleton, without dictating learner-owned code.
 
 ### `/ducktutor:checkpoint [optional file, path, or concept]`
 
-Test your understanding of an applied change using its actual diff and behavior.
+Explain a load-bearing decision in your own words using the actual diff and observed behavior.
 
 ### `/ducktutor:implement <problem or feature and optional file scope>`
 
-Continue from a relevant completed `/teach-me`, `/explain`, `/review`, `/hint`, or `/checkpoint`
-interaction in the current conversation. You must have engaged with that earlier step; an unrelated
-or merely invoked command does not unlock editing. DuckTutor then names the exact files, asks you to
-approve the scope and every edit operation, and never touches unrelated files.
+Continue an active task after its prediction and ownership map. DuckTutor guides your learner-owned
+implementation and may edit only approved agent-editable files. Every agent edit still needs approval.
 
 ## Codex skill
 
@@ -114,22 +113,32 @@ $ducktutor:tutor Implement this feature with manual approval for every scoped ed
 $ducktutor:tutor Review my current diff and check whether I understand it.
 ```
 
-The same scope and approval hook protects Codex tool calls. Codex asks you to review and trust plugin
-hooks before enabling them; the protection is inactive until the hook is trusted.
+The same state and ownership hooks protect Codex tool calls. Codex asks you to review and trust plugin
+hooks before enabling them; protection and automatic session restore are inactive until trusted.
+
+## Persistent learning state
+
+DuckTutor stores one active task per Git repository under `.git/ducktutor/state.json`, so it does not
+dirty the working tree. The state records the task, ownership map, and current phase:
+`grounded → predicted → attempted → verified → explained`. A session-start hook restores a compact
+summary after startup, resume, clear, or context compaction. State records progress; it does not prove
+understanding or replace inspection of the current diff. The map cannot be used while another branch
+is checked out or when rewritten history no longer descends from its approved baseline. DuckTutor
+then requires fresh inspection and ownership-map approval before editing.
 
 ## MCP-assisted verification
 
 DuckTutor can use MCP servers that you have already configured in Claude Code or Codex. It does not
 bundle, install, or require a particular server: browser automation, developer tools, and other test
 adapters remain your choice. When a host exposes a tool using the canonical
-`mcp__<server>__<tool>` name, DuckTutor's guard defers that call to the host's own server and
-per-tool permission settings.
+`mcp__<server>__<tool>` name, DuckTutor classifies observation/testing operations separately from
+file mutation. Unknown capabilities use the host's explicit approval flow.
 
 During a scoped feature, fix, or review, DuckTutor may use an available MCP tool to navigate a local
 or test application, exercise the relevant flow, inspect page state, console output, or network
 activity, and capture snapshots or screenshots. It reports the target, actions, expectation, and
-observed result. MCP tools never replace the learning gate, native edit approval, actual diff
-review, or comprehension check.
+observed result. MCP file-mutation tools are denied. MCP tools never replace the ownership map,
+native edit approval, actual diff review, or explain-it-back gate.
 
 ## Installation
 
@@ -168,13 +177,12 @@ marketplace is intentionally separate from editing this source repository.
 ## Typical loop
 
 1. Start with `/ducktutor:explain` in Claude Code or `$ducktutor:tutor` in Codex.
-2. Reason through one prediction gate when the change has a meaningful design choice.
-3. Apply the suggestion yourself, or continue in the same conversation with
-   `/ducktutor:implement` and approve its exact file scope and each edit.
+2. Reason through one prediction gate and approve the learner/agent ownership map.
+3. Write the learner-owned implementation; use `/ducktutor:implement` for approved support files.
 4. Let DuckTutor perform scoped MCP-assisted end-to-end observation when a suitable tool is
    available, and run any remaining shell test command yourself.
 5. Run `/ducktutor:review` on the actual changes.
-6. Explain the load-bearing decisions and complete the checkpoint.
+6. Explain the load-bearing decisions in your own words and complete the checkpoint.
 7. Revise or reject the change when understanding or evidence is weak.
 
 ## Contributing

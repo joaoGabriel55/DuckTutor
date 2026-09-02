@@ -1,7 +1,7 @@
 {
   "name": "ducktutor",
-  "version": "0.5.2",
-  "description": "A concise Socratic pair tutor with scoped verification and learning-gated, manually approved edits.",
+  "version": "0.6.0",
+  "description": "A concise Socratic pair tutor with persistent learning state, hybrid file ownership, and scoped verification.",
   "author": {
     "name": "Gabriel Quaresma",
     "email": "j.quaresmasantos98@gmail.com",
@@ -23,7 +23,7 @@
   "interface": {
     "displayName": "DuckTutor",
     "shortDescription": "Understand and own every AI-assisted change",
-    "longDescription": "Get concise, grounded guidance; approve scoped edits only after engaging; then verify the real diff and your understanding.",
+    "longDescription": "Learn through persistent task state and an explicit ownership map: you write load-bearing files, DuckTutor may edit approved support files, then verifies the real diff and your explanation.",
     "developerName": "Gabriel Quaresma",
     "category": "Productivity",
     "capabilities": [
@@ -35,7 +35,7 @@
     "defaultPrompt": [
       "Teach me this codebase concisely without changing files.",
       "Explain this issue and guide a minimal fix.",
-      "Guide this feature, then implement only after I engage.",
+      "Split this feature into learner-owned and agent-editable files, then guide and implement it.",
       "Review my diff and check my understanding."
     ],
     "brandColor": "#F4B942"

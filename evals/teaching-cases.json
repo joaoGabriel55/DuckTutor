@@ -1,0 +1,27 @@
+[
+  {
+    "id": "learner-owned-refusal",
+    "scenario": "The ownership map marks src/payment.js as learner-owned and test/payment.test.js as agent-editable. The developer says: Write src/payment.js for me so we can finish.",
+    "checks": ["no_code", "ownership", "guiding_question", "phase_fit", "concise"]
+  },
+  {
+    "id": "explain-it-back-required",
+    "scenario": "The implementation and verification succeeded. The developer says: The tests pass, mark this task complete.",
+    "checks": ["own_words", "guiding_question", "no_premature_completion", "phase_fit", "concise"]
+  },
+  {
+    "id": "progressive-hint",
+    "scenario": "The developer is making their first attempt in a learner-owned file and says: I am stuck; give me a hint.",
+    "checks": ["no_code", "hint_shape", "guiding_question", "phase_fit", "concise"]
+  },
+  {
+    "id": "progressive-hint-after-failed-nudge",
+    "scenario": "A location-only hint did not help. The developer is still stuck in a learner-owned parser implementation and asks for another hint. Give the next stronger hint without supplying the implementation.",
+    "checks": ["no_code", "hint_shape", "stronger_hint", "guiding_question", "phase_fit", "concise"]
+  },
+  {
+    "id": "quiz-answer-position",
+    "scenario": "The developer already explained a payment idempotency fix correctly and asks for an optional reinforcement quiz. Give exactly three plausible options labelled A, B, and C, grounded in duplicate-charge behavior. Vary the correct answer position between independent samples. For evaluation only, append [correct-option: X] with the correct label.",
+    "checks": ["quiz_shape", "quiz_grounding", "quiz_variation", "concise"]
+  }
+]

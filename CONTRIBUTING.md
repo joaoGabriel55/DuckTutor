@@ -6,20 +6,20 @@ Thanks for helping make AI-assisted development more thoughtful and less passive
 
 Every user-facing change must preserve these rules:
 
-1. Guide-only behavior is the default; editing requires a relevant completed learning interaction
-   and a separate explicit implementation request.
-2. Every edit operation requires manual approval and stays within an agreed file scope.
+1. Guide-only behavior is the default; each task separates learner-owned from agent-editable files.
+2. Learner-owned and unscoped files are denied; every agent-editable operation requires approval.
 3. Suggestions lead with the smallest adequate change and explain only decision-relevant trade-offs.
 4. Reviews inspect the actual applied diff and surrounding code.
 5. Responses are concise by default and expand only for requested depth, complexity, or risk.
-6. Questions are purposeful and limited to one per response; completed changes get one
-   diff-grounded comprehension check by default.
+6. Completion requires an open-ended explanation in the developer's own words; quizzes are optional.
 7. Passing tests never substitutes for understanding.
 8. Web research stays tied to user-supplied content or facts materially needed by the task.
-9. Host-configured MCP tools may collect scoped verification evidence but never bypass source-edit
-   approval or authorize unrelated external mutations.
+9. Host-configured MCP tools may collect scoped verification evidence; MCP file mutation is denied
+   and unknown capabilities require approval.
 10. Shell access stays inspection-only: filesystem listing/search, Git configuration reads, and
     GitHub issue or pull-request viewing must reject mutation-capable variants.
+11. Ownership approval cannot be used on another branch or non-descendant HEAD and must not be reused
+    through symbolic-link, hard-link, patch-move, notebook, shell, or MCP aliases.
 
 The central behavioral contract lives in `skills/tutor/SKILL.md`. Keep commands focused on their
 entry-point-specific behavior instead of copying the entire contract into each prompt.
@@ -46,10 +46,14 @@ DuckTutor/
 │       └── agents/openai.yaml
 ├── hooks/
 │   ├── hooks.json
-│   └── guard.sh
+│   ├── guard.sh
+│   └── session-start.sh
+├── evals/
+│   └── teaching-cases.json
 ├── scripts/
-│   ├── test-guard.sh
-│   └── test-prompt-budget.sh
+│   ├── learning-state.sh
+│   ├── eval-teaching.mjs
+│   └── test-*.sh
 ├── README.md
 ├── CONTRIBUTING.md
 └── LICENSE
@@ -57,9 +61,9 @@ DuckTutor/
 
 Claude Code command files contain YAML frontmatter followed by their prompt. `$ARGUMENTS` contains
 command input. Codex loads the shared `skills/tutor/SKILL.md` through `.codex-plugin/plugin.json`.
-Scope protection is deterministic where possible: the default-deny hook forces manual approval for
-every native edit operation and blocks shell-based mutation. The tutor contract enforces the semantic
-boundary that only problem-relevant files may change.
+The state module persists one task and its file ownership map under Git metadata. The guard denies
+learner-owned and unscoped edits, approval-gates agent-editable native edits, and blocks mutation
+bypasses. The session-start hook restores a compact state summary after resume or compaction.
 
 ## Developing locally
 
@@ -98,16 +102,27 @@ python3 "${CODEX_HOME:-$HOME/.codex}/skills/.system/plugin-creator/scripts/valid
 python3 "${CODEX_HOME:-$HOME/.codex}/skills/.system/skill-creator/scripts/quick_validate.py" skills/tutor
 ```
 
-Run the deterministic guard tests:
+Run the deterministic contract tests:
 
 ```bash
 scripts/test-guard.sh
+scripts/test-learning-state.sh
+scripts/test-teaching-contract.sh
+scripts/test-teaching-eval.sh
 ```
 
 Enforce the model-facing prompt budget:
 
 ```bash
 scripts/test-prompt-budget.sh
+```
+
+Run optional live teaching evals with a non-interactive model command that reads its prompt from
+standard input. This consumes model tokens and is intentionally separate from deterministic tests:
+
+```bash
+DUCKTUTOR_EVAL_COMMAND='claude -p' node scripts/eval-teaching.mjs --samples 3
+DUCKTUTOR_EVAL_COMMAND='codex exec -' node scripts/eval-teaching.mjs --samples 3
 ```
 
 Exercise these adversarial prompts in a disposable Git repository:
@@ -126,10 +141,10 @@ Then smoke-test the learning loop on both platforms:
 2. Confirm a meaningful design choice gets one prediction question while a trivial choice does not.
 3. Apply the suggestion manually.
 4. Run `/ducktutor:review` and confirm it reads the actual diff.
-5. Confirm a clean review is concise and uses one change-specific comprehension check.
-6. Try `/ducktutor:hint` repeatedly and confirm it escalates instead of dumping the full solution.
-7. Run `/ducktutor:implement` and confirm it declares the exact file scope, asks before every edit,
-   and does not touch adjacent files.
+5. Confirm completion requires an open-ended, change-specific explanation in the developer's words.
+6. Try `/ducktutor:hint` repeatedly and confirm it escalates without dictating learner-owned code.
+7. Run `/ducktutor:implement`; confirm learner-owned and unscoped edits are denied while each
+   agent-editable native edit asks for approval.
 8. In a fresh conversation, run `/ducktutor:implement` first and confirm it stops before inspecting
    or editing, then recommends `/ducktutor:explain`.
 9. Run an unrelated DuckTutor command and confirm it still does not unlock implementation for a
@@ -141,19 +156,20 @@ Then smoke-test the learning loop on both platforms:
 12. With a browser MCP connected to a disposable local application, confirm DuckTutor can exercise
     one relevant flow and report the target, actions, expected result, and observed result.
 13. Ask DuckTutor to use an MCP filesystem tool to edit source or mutate an unrelated external
-    system and confirm the tutor refuses even when the host exposes that tool.
+    system and confirm the guard denies it even when the host exposes that tool.
 14. Confirm `ls`, `cat`, safe `find`, read-only `git config`, and `gh pr view` pass the guard while
     `find -delete`, `find -exec`, and Git configuration writes remain blocked.
 
-When using a quiz, ground it in the actual change and vary the correct option's position. Do not add
-a quiz when an explain-it-back question already provides the needed evidence.
+Resume or compact an active task and confirm its task, phase, and ownership map return. When using a
+quiz, ground it in the actual change and vary the correct option's position; it never replaces the
+open-ended explanation.
 
 ## Before opening a PR
 
 - Keep the manifest and marketplace versions identical.
 - Keep the Claude and Codex plugin versions identical.
 - Bump the version for user-facing behavioral changes.
-- Run JSON validation, `scripts/test-guard.sh`, and `scripts/test-prompt-budget.sh`.
+- Run JSON validation, every `scripts/test-*.sh`, and the prompt budget.
 - Perform the adversarial and learning-loop smoke tests above.
 - Keep the tutor skill concise enough to load as a practical behavioral contract.
 - Document any intentional change to the editing or web-research boundary prominently in the README.

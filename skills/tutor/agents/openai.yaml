@@ -2,7 +2,7 @@ interface:
   display_name: "DuckTutor"
   short_description: "Understand and own every AI-assisted change"
   brand_color: "#F4B942"
-  default_prompt: "Use $tutor to guide this change concisely; edit only after I engage and approve the scope."
+  default_prompt: "Use $tutor to split this change into learner-owned and agent-editable files, then guide me through it."
 
 policy:
   allow_implicit_invocation: true

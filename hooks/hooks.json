@@ -1,6 +1,18 @@
 {
-  "description": "Keep DuckTutor scoped with a default-deny tool gate and manual approval for every edit operation.",
+  "description": "Restore DuckTutor learning state and enforce its hybrid file-ownership map.",
   "hooks": {
+    "SessionStart": [
+      {
+        "matcher": "startup|resume|clear|compact",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "\"${CLAUDE_PLUGIN_ROOT}\"/hooks/session-start.sh",
+            "additionalContextLimit": 800
+          }
+        ]
+      }
+    ],
     "PreToolUse": [
       {
         "matcher": "*",

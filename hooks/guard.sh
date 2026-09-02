@@ -2,6 +2,7 @@
 
 set -uo pipefail
 
+ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 MODE="${1:-}"
 PAYLOAD="$(cat 2>/dev/null || true)"
 
@@ -122,7 +123,7 @@ check_git_config() {
 }
 
 check_bash() {
-  local command
+  local command state_script state_script_variable state_args state_action
   command="$(extract_field command 2>/dev/null || true)"
   if [[ -z "$command" ]]; then
     deny "DuckTutor could not verify this shell command as read-only, so it was blocked."
@@ -132,6 +133,43 @@ check_bash() {
         "$command" == *'&'* || "$command" == *'>'* || "$command" == *'<'* ||
         "$command" == *'`'* || "$command" == *'$('* ]]; then
     deny "DuckTutor blocks shell composition and redirection. Run mutation-capable commands yourself and share the output for review."
+  fi
+
+  state_script="$ROOT/scripts/learning-state.sh"
+  state_script_variable='"${CLAUDE_PLUGIN_ROOT}/scripts/learning-state.sh"'
+  if [[ "$command" == "$state_script"\ * ]]; then
+    state_args="${command#"$state_script" }"
+  elif [[ "$command" == \"$state_script\"\ * ]]; then
+    state_args="${command#\"$state_script\" }"
+  elif [[ "$command" == "$state_script_variable"\ * ]]; then
+    state_args="${command#"$state_script_variable" }"
+  else
+    state_args=""
+  fi
+
+  if [[ -n "$state_args" ]]; then
+    state_action="${state_args%% *}"
+    case "$state_action" in
+      show)
+        [[ "$state_args" == "show" ]] || deny "DuckTutor state reads do not accept additional arguments."
+        return 0
+        ;;
+      phase)
+        case "$state_args" in
+          "phase predicted"|"phase attempted"|"phase verified") return 0 ;;
+          "phase explained developer-confirmed")
+            ask "DuckTutor wants to record that you explained the solution in your own words. Approve only after you actually did so."
+            ;;
+          *) deny "DuckTutor only allows one valid sequential learning phase per state update." ;;
+        esac
+        ;;
+      begin|scope|clear)
+        ask "DuckTutor wants to update its Git-local learning state. Approve only if the task, ownership map, or reset matches your intent."
+        ;;
+      *)
+        deny "DuckTutor blocked an unsupported learning-state command."
+        ;;
+    esac
   fi
 
   case "$command" in
@@ -159,13 +197,146 @@ check_bash() {
   esac
 }
 
+check_native_edit() {
+  local tool_name="$1"
+  local state_json result decision reason
+
+  if [[ "$tool_name" == "NotebookEdit" ]]; then
+    deny "DuckTutor blocks notebook mutation as an ownership-map bypass. Use an approved native file edit for agent-owned files or edit the notebook yourself."
+  fi
+
+  state_json="$(DUCKTUTOR_PROJECT_DIR="${DUCKTUTOR_PROJECT_DIR:-$PWD}" "$ROOT/scripts/learning-state.sh" show 2>/dev/null || true)"
+  if [[ -z "$state_json" ]]; then
+    deny "DuckTutor has no readable learning state. Start the learning flow and approve an ownership map before requesting edits."
+  fi
+
+  result="$(PAYLOAD_JSON="$PAYLOAD" STATE_JSON="$state_json" TOOL_NAME="$tool_name" PROJECT_DIR="${DUCKTUTOR_PROJECT_DIR:-$PWD}" node -e '
+    const fs = require("fs");
+    const path = require("path");
+    const payload = JSON.parse(process.env.PAYLOAD_JSON || "{}");
+    const state = JSON.parse(process.env.STATE_JSON);
+    const tool = process.env.TOOL_NAME;
+    const project = path.resolve(state.repositoryRoot || process.env.PROJECT_DIR);
+    const input = payload.tool_input || {};
+
+    function finish(decision, reason) {
+      process.stdout.write(`${decision}\t${reason}`);
+      process.exit(0);
+    }
+
+    if (!["predicted", "attempted"].includes(state.phase)) {
+      finish("deny", `DuckTutor edits require the predicted or attempted phase; current phase is ${state.phase}.`);
+    }
+    if (state.stale) {
+      finish("deny", `DuckTutor ownership approval is stale (${state.staleReason || "repository context changed"}). Start and approve the task again.`);
+    }
+    if (!state.agentPaths.length) {
+      finish("deny", "DuckTutor has no approved agent-editable files for this task.");
+    }
+
+    let candidates = [];
+    let deletes = false;
+    let moves = false;
+    if (tool === "apply_patch" || tool === "ApplyPatch") {
+      const patchText = typeof input.patch === "string" ? input.patch : typeof input.input === "string" ? input.input : "";
+      for (const match of patchText.matchAll(/^\*\*\* (Update|Add|Delete) File: (.+)$/gm)) {
+        deletes ||= match[1] === "Delete";
+        candidates.push(match[2].trim());
+      }
+      moves = /^\*\*\* Move to:/m.test(patchText);
+    } else {
+      for (const key of ["file_path", "path"]) {
+        if (typeof input[key] === "string") candidates.push(input[key]);
+      }
+    }
+
+    if (deletes) finish("deny", "DuckTutor does not delete files through hybrid implementation mode.");
+    if (moves) finish("deny", "DuckTutor does not move or rename files through hybrid implementation mode.");
+    if (!candidates.length) finish("deny", "DuckTutor could not identify every file targeted by this edit.");
+
+    function relativeProjectPath(candidate) {
+      const absolute = path.isAbsolute(candidate) ? path.resolve(candidate) : path.resolve(project, candidate);
+      const relative = path.relative(project, absolute).replaceAll(path.sep, "/");
+      if (!relative || relative === ".." || relative.startsWith("../")) return null;
+      return relative.replace(/^\.\//, "");
+    }
+
+    function usesSymlink(candidate) {
+      const absolute = path.isAbsolute(candidate) ? path.resolve(candidate) : path.resolve(project, candidate);
+      const relative = path.relative(project, absolute);
+      if (relative === ".." || relative.startsWith(`..${path.sep}`)) return true;
+      let current = project;
+      for (const segment of relative.split(path.sep).filter(Boolean)) {
+        current = path.join(current, segment);
+        if (!fs.existsSync(current)) break;
+        if (fs.lstatSync(current).isSymbolicLink()) return true;
+      }
+      return false;
+    }
+
+    const normalized = [...new Set(candidates.map(relativeProjectPath))];
+    if (normalized.some((candidate) => candidate === null)) {
+      finish("deny", "DuckTutor blocks edits outside the active project.");
+    }
+    if (candidates.some(usesSymlink)) {
+      finish("deny", "DuckTutor blocks edits through symbolic-link aliases.");
+    }
+    function hasHardLinkAlias(candidate) {
+      const absolute = path.isAbsolute(candidate) ? path.resolve(candidate) : path.resolve(project, candidate);
+      if (!fs.existsSync(absolute)) return false;
+      return fs.statSync(absolute).nlink > 1;
+    }
+    if (candidates.some(hasHardLinkAlias)) {
+      finish("deny", "DuckTutor blocks edits through hard-link aliases because every linked path cannot be verified as agent-owned.");
+    }
+    const learner = normalized.find((candidate) => state.learnerPaths.includes(candidate));
+    if (learner) finish("deny", `${learner} is learner-owned; DuckTutor may review it but cannot write it.`);
+    const unscoped = normalized.find((candidate) => !state.agentPaths.includes(candidate));
+    if (unscoped) finish("deny", `${unscoped} is not in the approved agent-editable scope.`);
+    finish("ask", `Approve only if this edit remains necessary and limited to agent-owned files: ${normalized.join(", ")}.`);
+  ' 2>/dev/null || true)"
+
+  decision="${result%%$'\t'*}"
+  reason="${result#*$'\t'}"
+  case "$decision" in
+    ask) ask "$reason" ;;
+    deny) deny "$reason" ;;
+    *) deny "DuckTutor could not validate this edit against the ownership map." ;;
+  esac
+}
+
+check_mcp_tool() {
+  local tool_name="$1"
+  local server operation
+  server="${tool_name#mcp__}"
+  server="${server%%__*}"
+  server="$(printf '%s' "$server" | tr '[:upper:]' '[:lower:]')"
+  operation="${tool_name##*__}"
+  operation="$(printf '%s' "$operation" | sed -E 's/([a-z0-9])([A-Z])/\1_\2/g' | tr '[:upper:]' '[:lower:]')"
+
+  if [[ "$operation" =~ (^|_)(write|overwrite|edit|update|modify|mutate|create|delete|remove|move|rename|patch|append|insert|replace|upload|save|shell|command|execute|copy|put|touch|mkdir|chmod|chown|truncate|symlink|link)($|_) ]]; then
+    deny "DuckTutor blocks MCP tools that can mutate source or files. Use approved native edits for agent-owned files."
+  fi
+
+  if [[ "$server" =~ (^|[-_])(file|filesystem|workspace|repo|repository)([-_]|$) ]]; then
+    if [[ "$operation" =~ (^|_)(read|get|list|search|find|inspect|view)($|_) ]]; then
+      exit 0
+    fi
+    deny "DuckTutor blocks unrecognized filesystem MCP operations because they may bypass the ownership map."
+  fi
+
+  if [[ "$operation" =~ (^|_)(read|get|list|search|find|inspect|view|snapshot|screenshot|navigate|click|fill|type|press|hover|select|wait|console|network|evaluate|verify|test|assert|open|close)($|_) ]]; then
+    exit 0
+  fi
+
+  ask "DuckTutor could not classify this MCP capability as observation or testing. Approve only if it will not modify project source or unrelated systems."
+}
+
 case "$MODE" in
   tool)
     TOOL_NAME="$(extract_field tool_name 2>/dev/null || true)"
     if [[ "$TOOL_NAME" == mcp__?*__?* ]]; then
-      # MCP servers and per-tool approval policy belong to the host. Returning no
-      # decision lets Claude Code or Codex apply that configured policy.
-      exit 0
+      check_mcp_tool "$TOOL_NAME"
     fi
     case "$TOOL_NAME" in
       Read|Glob|Grep|WebFetch|WebSearch|web__run|web.run|AskUserQuestion|request_user_input|Skill|update_plan|ToolSearch|tool_search|WaitForMcpServers)
@@ -176,7 +347,7 @@ case "$MODE" in
         exit 0
         ;;
       Write|Edit|NotebookEdit|MultiEdit|ApplyPatch|apply_patch)
-        ask "DuckTutor never auto-approves edits. Approve only if this file is in the explicitly agreed problem scope and the proposed change is the smallest adequate edit."
+        check_native_edit "$TOOL_NAME"
         ;;
       "")
         deny "DuckTutor could not identify this tool, so the scoped default-deny guard blocked it."
@@ -187,7 +358,7 @@ case "$MODE" in
     esac
     ;;
   file)
-    ask "DuckTutor never auto-approves edits. Approve only if this file is in the explicitly agreed problem scope and the proposed change is the smallest adequate edit."
+    check_native_edit "file"
     ;;
   bash)
     check_bash
