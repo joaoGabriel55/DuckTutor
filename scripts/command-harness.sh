@@ -12,7 +12,7 @@ case "$COMMAND" in
     DUCKTUTOR_PROJECT_DIR="${DUCKTUTOR_PROJECT_DIR:-$PWD}" "$STATE" show
     ;;
   enter)
-    [[ "$#" -eq 2 || ( "$#" -eq 3 && "$2" == "implement" && "$3" == "--force-agent" ) ]] || exit 1
+    [[ "$#" -eq 2 || ( "$#" -eq 3 && "$2" == "implement" && "$3" == "--force-agent" ) || ( "$#" -eq 3 && "$2" == "explain" && "$3" == "--new-task" ) ]] || exit 1
     DUCKTUTOR_PROJECT_DIR="${DUCKTUTOR_PROJECT_DIR:-$PWD}" "$STATE" engage "${@:2}"
     ;;
   checkpoint-require)

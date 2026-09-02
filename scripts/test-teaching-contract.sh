@@ -19,8 +19,17 @@ expect_text() {
 
 for file in "$ROOT"/commands/*.md; do
   expect_text "$(basename "$file") can access learning state" 'learning-state\.sh' "$file"
-  expect_text "$(basename "$file") enters deterministic harness" 'command-harness\.sh.*enter' "$file"
+  expect_text "$(basename "$file") enters canonical deterministic harness" '\$\{CLAUDE_PLUGIN_ROOT\}/scripts/command-harness\.sh"? enter' "$file"
 done
+
+expect_text "explain starts an explicit new task" 'command-harness\.sh"? enter explain --new-task' "$ROOT/commands/explain.md"
+
+if grep -ERq '`(command-harness|learning-state)\.sh' "$ROOT/commands"; then
+  printf 'FAIL teaching contract: command prompts contain a bare internal script invocation\n'
+  FAILURES=$((FAILURES + 1))
+else
+  printf 'PASS teaching contract: command prompts use only canonical internal script paths\n'
+fi
 
 for file in "$ROOT"/commands/*.md; do
   if [[ "$(basename "$file")" == "implement.md" ]]; then

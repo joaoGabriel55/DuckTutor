@@ -160,12 +160,15 @@ check_bash() {
   fi
   if [[ -n "$harness_args" ]]; then
     case "$harness_args" in
-      show|"enter teach-me"|"enter explain"|"enter review"|"enter hint"|"enter checkpoint"|"enter implement"|"enter implement --force-agent"|checkpoint-require) return 0 ;;
+      show|"enter teach-me"|"enter explain"|"enter explain --new-task"|"enter review"|"enter hint"|"enter checkpoint"|"enter implement"|"enter implement --force-agent"|checkpoint-require) return 0 ;;
       "checkpoint-pass developer-confirmed")
         ask "DuckTutor wants to record that you answered the required comprehension checkpoint. Approve only after a satisfactory answer."
         ;;
       *) deny "DuckTutor blocked an unsupported command-harness action." ;;
     esac
+  fi
+  if [[ "$command" == *command-harness.sh* ]]; then
+    deny "DuckTutor internal command invocation is invalid; use the canonical plugin-root harness path."
   fi
   if [[ "$command" == "$state_script"\ * ]]; then
     state_args="${command#"$state_script" }"

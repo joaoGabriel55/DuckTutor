@@ -6,7 +6,8 @@ allowed-tools: Read Glob Grep WebFetch WebSearch AskUserQuestion Skill Bash("${C
 
 # DuckTutor · hint
 
-Use the **tutor** skill in guide-only mode. First run `command-harness.sh enter hint`; stop if it
+Use the **tutor** skill in guide-only mode. First run
+`"${CLAUDE_PLUGIN_ROOT}/scripts/command-harness.sh" enter hint`; stop if it
 rejects entry. Read persisted state and inspect the relevant code and
 prior hints for `$ARGUMENTS`. Give only the next useful nudge: location or invariant, leading
 question, prose shape, then a partial skeleton. Do not dictate learner-owned code or provide a

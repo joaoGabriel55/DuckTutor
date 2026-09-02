@@ -27,6 +27,8 @@ Every user-facing change must preserve these rules:
     selectively without copying their contents into persistent state.
 14. Force-agent implementation requires prior tutoring and an explicit all-agent map; it never
     bypasses file scope, edit approval, verification, or comprehension gates.
+15. Explicit explain commands start fresh task state and every internal command uses its canonical
+    plugin-root path; stale task maps and bare script names must never be reused.
 
 The central behavioral contract lives in `skills/tutor/SKILL.md`. Keep commands focused on their
 entry-point-specific behavior instead of copying the entire contract into each prompt.
@@ -178,6 +180,8 @@ Then smoke-test the learning loop on both platforms:
     `find -delete`, `find -exec`, and Git configuration writes remain blocked.
 16. Add nested project instructions, local skills, hooks, workflows, and a build manifest; confirm the
     context inventory returns paths only and DuckTutor reads only the relevant entries.
+17. Complete one task, then explain an unrelated task; confirm the old task and ownership map are
+    retired. Confirm a pending checkpoint blocks this transition and bare harness names are denied.
 
 Resume or compact an active task and confirm its task, phase, and ownership map return. When using a
 quiz, ground it in the actual change and vary the correct option's position; it never replaces the

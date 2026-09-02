@@ -113,11 +113,22 @@ expect_allowed "project context inventory through plugin variable" '"${CLAUDE_PL
 expect_denied "unsupported project context command" "$PROJECT_CONTEXT scan"
 expect_allowed "command harness state read" "$HARNESS show"
 expect_allowed "command harness entry" "$HARNESS enter explain"
+expect_allowed "command harness new-task entry" "$HARNESS enter explain --new-task"
+expect_allowed "plugin-variable new-task entry" '"${CLAUDE_PLUGIN_ROOT}/scripts/command-harness.sh" enter explain --new-task'
 expect_allowed "command harness forced implementation entry" "$HARNESS enter implement --force-agent"
 expect_denied "unknown command harness implementation flag" "$HARNESS enter implement --force"
 expect_allowed "command harness checkpoint requirement" "$HARNESS checkpoint-require"
 expect_command_asked "confirmed checkpoint completion" "$HARNESS checkpoint-pass developer-confirmed"
 expect_denied "unsupported command harness action" "$HARNESS bypass"
+
+bare_harness_payload='{"tool_input":{"command":"command-harness.sh enter explain"}}'
+bare_harness_output="$(printf '%s' "$bare_harness_payload" | guard bash)"
+if [[ "$bare_harness_output" == *'DuckTutor internal command invocation is invalid'* ]]; then
+  printf 'PASS denied: bare internal harness gets a specific error\n'
+else
+  printf 'FAIL denied: bare internal harness gets a specific error\n'
+  FAILURES=$((FAILURES + 1))
+fi
 expect_command_asked "learning task begin" "$STATE begin guard-test"
 expect_command_asked "ownership map change" "$STATE scope learner:src/app.js agent:test/app.test.js"
 expect_allowed "learning phase advance" "$STATE phase attempted"

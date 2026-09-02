@@ -6,8 +6,9 @@ allowed-tools: Read Glob Grep WebFetch WebSearch AskUserQuestion Skill Bash("${C
 
 # DuckTutor · explain
 
-Use the **tutor** skill in guide-only mode. First run `command-harness.sh enter explain`; stop if it
-rejects entry. Require `$ARGUMENTS`, inspect enough context, and begin
+Use the **tutor** skill in guide-only mode. First run
+`"${CLAUDE_PLUGIN_ROOT}/scripts/command-harness.sh" enter explain --new-task`; stop if it rejects
+entry. Require `$ARGUMENTS`, inspect enough context, and begin
 persistent learning state. State the behavior, smallest viable change, riskiest edge case, and
 verification signal. Ask one prediction question and wait, then record `predicted`.
 

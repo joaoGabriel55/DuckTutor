@@ -117,11 +117,32 @@ else
 fi
 
 expect_failure "entry gate blocks review while unanswered" run_harness enter review
+expect_failure "new task cannot bypass unanswered checkpoint" run_harness enter explain --new-task
 expect_success "entry gate allows checkpoint" run_harness enter checkpoint
 expect_failure "checkpoint cannot clear without confirmation" run_harness checkpoint-pass
 expect_failure "pending checkpoint cannot be erased" env DUCKTUTOR_PROJECT_DIR="$PROJECT" "$STATE" clear
 expect_success "confirmed understanding clears checkpoint" run_harness checkpoint-pass developer-confirmed
 expect_success "commands resume after checkpoint" run_harness enter review
+expect_success "record completed attempt" env DUCKTUTOR_PROJECT_DIR="$PROJECT" "$STATE" phase attempted
+expect_success "record completed verification" env DUCKTUTOR_PROJECT_DIR="$PROJECT" "$STATE" phase verified
+expect_success "record completed explanation" env DUCKTUTOR_PROJECT_DIR="$PROJECT" "$STATE" phase explained developer-confirmed
+expect_failure "new-task flag is explain-only" run_harness enter review --new-task
+expect_success "new explain retires completed task" run_harness enter explain --new-task
+
+new_task_state="$(run_harness show)"
+if STATE_JSON="$new_task_state" PROJECT_ROOT="$PROJECT" node -e '
+  const state = JSON.parse(process.env.STATE_JSON);
+  if (state.phase !== "idle" || state.task !== "") process.exit(1);
+  if (state.learnerPaths.length || state.agentPaths.length || state.checkpointRequired) process.exit(1);
+  if (state.activeCommand !== "explain" || state.implementationMode !== "hybrid") process.exit(1);
+  if (!state.engagedCommands.includes("explain") || !state.engagedCommands.includes("implement")) process.exit(1);
+  if (state.repositoryRoot !== require("fs").realpathSync(process.env.PROJECT_ROOT) || !state.baselineHead) process.exit(1);
+'; then
+  printf 'PASS harness: new explain preserves engagement but clears unrelated task state\n'
+else
+  printf 'FAIL harness: new explain preserves engagement but clears unrelated task state\n'
+  FAILURES=$((FAILURES + 1))
+fi
 
 if (( FAILURES > 0 )); then
   printf '%s command-harness test(s) failed\n' "$FAILURES"

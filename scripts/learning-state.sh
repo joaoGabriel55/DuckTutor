@@ -143,13 +143,25 @@ switch (command) {
     const entry = args[0];
     const commands = ["teach-me", "explain", "review", "hint", "checkpoint", "implement"];
     const forceAgent = entry === "implement" && args.length === 2 && args[1] === "--force-agent";
-    if ((!forceAgent && args.length !== 1) || !commands.includes(entry)) {
-      fail("engage requires a DuckTutor command name; implement optionally accepts --force-agent");
+    const newTask = entry === "explain" && args.length === 2 && args[1] === "--new-task";
+    if ((!forceAgent && !newTask && args.length !== 1) || !commands.includes(entry)) {
+      fail("engage requires a DuckTutor command name; implement accepts --force-agent and explain accepts --new-task");
     }
-    if (current.stale) fail(`state is stale: ${current.staleReason}; clear it before continuing`);
     if (current.checkpointRequired && entry !== "checkpoint") {
       fail("answer the required comprehension checkpoint before using another DuckTutor command");
     }
+    if (newTask) {
+      writeState({
+        ...idle,
+        repositoryRoot,
+        branch: currentBranch,
+        baselineHead: currentHead,
+        engagedCommands: [...new Set([...current.engagedCommands, entry])],
+        activeCommand: entry,
+      });
+      break;
+    }
+    if (current.stale) fail(`state is stale: ${current.staleReason}; clear it before continuing`);
     if (entry === "implement" && !current.engagedCommands.some((command) => command !== "implement")) {
       fail("run any other DuckTutor command before implement");
     }

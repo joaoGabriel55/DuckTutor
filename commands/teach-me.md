@@ -6,7 +6,8 @@ allowed-tools: Read Glob Grep WebFetch WebSearch AskUserQuestion Skill Bash("${C
 
 # DuckTutor · teach-me
 
-Use the **tutor** skill in guide-only mode. First run `command-harness.sh enter teach-me`; stop if it
+Use the **tutor** skill in guide-only mode. First run
+`"${CLAUDE_PLUGIN_ROOT}/scripts/command-harness.sh" enter teach-me`; stop if it
 rejects entry. Read active learning state and inspect the repository,
 focusing on `$ARGUMENTS`. Explain purpose, key modules, important flow, and relevant conventions.
 For a concrete change, begin persistent state; for orientation, do not create state. Distinguish facts

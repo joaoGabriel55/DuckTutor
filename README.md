@@ -73,6 +73,8 @@ it helps.
 
 Understand the problem, choose the smallest approach, answer one meaningful prediction, and approve
 which files you will write versus which support files DuckTutor may edit.
+Each explicit `/explain` starts fresh task state, so an older task and ownership map cannot leak into
+the new request. A pending comprehension checkpoint must still be completed first.
 
 ```text
 /ducktutor:explain https://github.com/org/repo/issues/123
