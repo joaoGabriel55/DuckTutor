@@ -113,8 +113,9 @@ expect_allowed "project context inventory through plugin variable" '"${CLAUDE_PL
 expect_denied "unsupported project context command" "$PROJECT_CONTEXT scan"
 expect_allowed "command harness state read" "$HARNESS show"
 expect_allowed "command harness entry" "$HARNESS enter explain"
-expect_allowed "command harness new-task entry" "$HARNESS enter explain --new-task"
-expect_allowed "plugin-variable new-task entry" '"${CLAUDE_PLUGIN_ROOT}/scripts/command-harness.sh" enter explain --new-task'
+expect_allowed "command harness new-task entry" "$HARNESS enter start --new-task"
+expect_allowed "plugin-variable new-task entry" '"${CLAUDE_PLUGIN_ROOT}/scripts/command-harness.sh" enter start --new-task'
+expect_denied "explain cannot create task state" "$HARNESS enter explain --new-task"
 expect_allowed "command harness forced implementation entry" "$HARNESS enter implement --force-agent"
 expect_denied "unknown command harness implementation flag" "$HARNESS enter implement --force"
 expect_allowed "command harness checkpoint requirement" "$HARNESS checkpoint-require"
@@ -145,7 +146,7 @@ else
   FAILURES=$((FAILURES + 1))
 fi
 
-DUCKTUTOR_PROJECT_DIR="$PROJECT" "$HARNESS" enter explain >/dev/null
+DUCKTUTOR_PROJECT_DIR="$PROJECT" "$HARNESS" enter start >/dev/null
 DUCKTUTOR_PROJECT_DIR="$PROJECT" "$STATE" begin "guard ownership test" >/dev/null
 DUCKTUTOR_PROJECT_DIR="$PROJECT" "$STATE" phase predicted >/dev/null
 DUCKTUTOR_PROJECT_DIR="$PROJECT" "$STATE" scope learner:src/app.js agent:test/app.test.js agent:test/app-link.js agent:test/app-hard.js agent:test/unscoped-hard.js agent:docs/app.md agent:linked/outside.txt >/dev/null

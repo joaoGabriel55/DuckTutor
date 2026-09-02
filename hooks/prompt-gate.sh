@@ -24,7 +24,7 @@ fi
 
 COMMAND="$(PROMPT_VALUE="$PROMPT" node -e '
   const prompt = process.env.PROMPT_VALUE || "";
-  const slash = prompt.match(/(?:^|\s)\/(?:ducktutor:)?(teach-me|explain|review|hint|checkpoint|implement)\b/i);
+  const slash = prompt.match(/(?:^|\s)\/(?:ducktutor:)?(teach-me|start|explain|review|hint|checkpoint|implement)\b/i);
   if (slash) process.stdout.write(slash[1].toLowerCase());
   else {
     const skill = prompt.match(/\$ducktutor:tutor\b([\s\S]*)/i);

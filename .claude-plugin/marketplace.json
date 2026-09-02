@@ -12,7 +12,7 @@
       "source": ".",
       "displayName": "DuckTutor",
       "description": "A concise Socratic pair tutor with project-native context, deterministic learning gates, and hybrid file ownership.",
-      "version": "0.8.1",
+      "version": "0.9.0",
       "author": {
         "name": "Gabriel Quaresma",
         "email": "j.quaresmasantos98@gmail.com"

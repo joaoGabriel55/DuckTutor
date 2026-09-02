@@ -1,6 +1,6 @@
 {
   "name": "ducktutor",
-  "version": "0.8.1",
+  "version": "0.9.0",
   "description": "A concise Socratic pair tutor with project-native context, deterministic learning gates, and hybrid file ownership.",
   "author": {
     "name": "Gabriel Quaresma",
@@ -34,7 +34,7 @@
     "websiteURL": "https://github.com/joaoGabriel55/DuckTutor",
     "defaultPrompt": [
       "Teach me this codebase concisely without changing files.",
-      "Explain this issue and guide a minimal fix.",
+      "Start this issue as a minimal, grounded implementation task.",
       "Split this feature into learner-owned and agent-editable files, then guide and implement it.",
       "Review my diff and check my understanding."
     ],

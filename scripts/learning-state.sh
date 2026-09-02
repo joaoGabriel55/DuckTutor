@@ -141,11 +141,11 @@ switch (command) {
   case "engage": {
     const current = readState();
     const entry = args[0];
-    const commands = ["teach-me", "explain", "review", "hint", "checkpoint", "implement"];
+    const commands = ["teach-me", "start", "explain", "review", "hint", "checkpoint", "implement"];
     const forceAgent = entry === "implement" && args.length === 2 && args[1] === "--force-agent";
-    const newTask = entry === "explain" && args.length === 2 && args[1] === "--new-task";
+    const newTask = entry === "start" && args.length === 2 && args[1] === "--new-task";
     if ((!forceAgent && !newTask && args.length !== 1) || !commands.includes(entry)) {
-      fail("engage requires a DuckTutor command name; implement accepts --force-agent and explain accepts --new-task");
+      fail("engage requires a DuckTutor command name; implement accepts --force-agent and start accepts --new-task");
     }
     if (current.checkpointRequired && entry !== "checkpoint") {
       fail("answer the required comprehension checkpoint before using another DuckTutor command");

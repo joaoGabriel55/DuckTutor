@@ -22,7 +22,11 @@ for file in "$ROOT"/commands/*.md; do
   expect_text "$(basename "$file") enters canonical deterministic harness" '\$\{CLAUDE_PLUGIN_ROOT\}/scripts/command-harness\.sh"? enter' "$file"
 done
 
-expect_text "explain starts an explicit new task" 'command-harness\.sh"? enter explain --new-task' "$ROOT/commands/explain.md"
+expect_text "start creates an explicit new task" 'command-harness\.sh"? enter start --new-task' "$ROOT/commands/start.md"
+expect_text "explain remains understanding-only" 'Do not begin task state' "$ROOT/commands/explain.md"
+expect_text "start offers a direct hybrid handoff" '/ducktutor:implement`' "$ROOT/commands/start.md"
+expect_text "start offers an explicit all-agent handoff" '/ducktutor:implement --force-agent' "$ROOT/commands/start.md"
+expect_text "implement can reuse the prepared task" 'Use the prepared task' "$ROOT/commands/implement.md"
 
 if grep -ERq '`(command-harness|learning-state)\.sh' "$ROOT/commands"; then
   printf 'FAIL teaching contract: command prompts contain a bare internal script invocation\n'

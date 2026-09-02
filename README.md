@@ -2,10 +2,11 @@
 
 **A Socratic AI pair tutor that keeps the developer responsible for the code**
 
-DuckTutor gives concise guidance for understanding a codebase, reasoning through an issue, and
-reviewing what changed. For each task, it separates learner-owned files from agent-editable support
-files. By default, you write the load-bearing implementation; explicit `/implement` requests may
-change approved files with your approval.
+DuckTutor gives concise guidance for understanding a codebase, starting a concrete feature or fix,
+and reviewing what changed. `/start` turns a problem description or issue into a small, grounded
+implementation handoff. For each task, DuckTutor separates learner-owned files from agent-editable
+support files. By default, you write the load-bearing implementation; explicit `/implement` requests
+may change approved files with your approval.
 
 DuckTutor supports both **Claude Code** and **Codex** from the same repository and tutoring skill.
 
@@ -19,6 +20,9 @@ technical judgment.
 - DuckTutor recommends the smallest adequate change and mentions alternatives only when they matter.
 - DuckTutor is concise by default and expands when complexity, risk, or your request requires it.
 - DuckTutor explains learner-owned code without dictating a transcription-ready solution.
+- `/start` grounds a new feature or bug fix, asks for one meaningful human judgment, and then hands
+  off directly to `/implement` without making you repeat the task.
+- `/explain` is for understanding code or behavior and does not silently create task state.
 - Any prior non-implementation DuckTutor command unlocks an explicit `/implement` request; missing
   task, prediction, and ownership gates are completed inside that flow.
 - `/implement --force-agent` allows an approved all-agent map only after that prior tutoring command.
@@ -69,17 +73,26 @@ it helps.
 /ducktutor:teach-me authentication
 ```
 
-### `/ducktutor:explain <issue URL or problem description>`
+### `/ducktutor:start <issue URL or problem description>`
 
-Understand the problem, choose the smallest approach, answer one meaningful prediction, and approve
-which files you will write versus which support files DuckTutor may edit.
-Each explicit `/explain` starts fresh task state, so an older task and ownership map cannot leak into
+Start a concrete feature or bug fix. DuckTutor inspects enough context to state the intended
+behavior, smallest adequate approach, riskiest edge case, and verification signal, then asks one
+open-ended prediction or trade-off question. After your answer, run `/ducktutor:implement` for guided
+hybrid work or `/ducktutor:implement --force-agent` for an approved all-agent scope. You do not need
+to repeat the task description.
+
+Each explicit `/start` creates fresh task state, so an older task and ownership map cannot leak into
 the new request. A pending comprehension checkpoint must still be completed first.
 
 ```text
-/ducktutor:explain https://github.com/org/repo/issues/123
-/ducktutor:explain "Users can submit the form twice on a slow connection"
+/ducktutor:start https://github.com/org/repo/issues/123
+/ducktutor:start "Users can submit the form twice on a slow connection"
 ```
+
+### `/ducktutor:explain <code, behavior, issue, or concept>`
+
+Understand how something works without starting a task, assigning files, or changing code. Use
+`/start` instead when the intent is to build or fix.
 
 ### `/ducktutor:review [optional file or path]`
 
@@ -100,11 +113,12 @@ skeleton, without dictating learner-owned code.
 
 Explain a load-bearing decision in your own words using the actual diff and observed behavior.
 
-### `/ducktutor:implement [--force-agent] <problem or feature and optional file scope>`
+### `/ducktutor:implement [--force-agent] [problem or feature and optional file scope]`
 
-After using any other DuckTutor command, start or continue implementation. DuckTutor establishes any
-missing learning gates, guides learner-owned work, and may edit only approved agent-editable files.
-Every edit needs approval and ends with a required open-ended comprehension quiz.
+After `/start`, begin implementation without repeating the task. DuckTutor establishes any missing
+learning gates, guides learner-owned work, and may edit only approved agent-editable files. You can
+also supply a task directly after using another DuckTutor command. Every edit needs approval and
+ends with a required open-ended comprehension quiz.
 
 With `--force-agent`, DuckTutor may implement every file in a newly approved all-agent map. The flag
 is rejected until another DuckTutor command has run and never authorizes unscoped or destructive edits.
@@ -116,7 +130,8 @@ explicitly:
 
 ```text
 $ducktutor:tutor Teach me how this repository works.
-$ducktutor:tutor Explain this issue and guide me through the smallest adequate fix.
+$ducktutor:tutor Start this issue as a minimal, grounded implementation task.
+$ducktutor:tutor Explain how this subsystem works without changing it.
 $ducktutor:tutor Implement this feature with manual approval for every scoped edit operation.
 $ducktutor:tutor Review my current diff and check whether I understand it.
 ```
@@ -194,9 +209,10 @@ marketplace is intentionally separate from editing this source repository.
 
 ## Typical loop
 
-1. Start with `/ducktutor:explain` in Claude Code or `$ducktutor:tutor` in Codex.
-2. Reason through one prediction gate and approve the learner/agent ownership map.
-3. Write the learner-owned implementation; use `/ducktutor:implement` for approved support files.
+1. Start a feature or fix with `/ducktutor:start <problem>` in Claude Code or `$ducktutor:tutor` in Codex.
+2. Reason through one prediction or trade-off question, then choose `/ducktutor:implement` or
+   `/ducktutor:implement --force-agent`.
+3. Approve the proposed ownership map and implement the scoped change.
 4. Let DuckTutor perform scoped MCP-assisted end-to-end observation when a suitable tool is
    available, and run any remaining shell test command yourself.
 5. Run `/ducktutor:review` on the actual changes.

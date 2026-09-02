@@ -154,8 +154,9 @@ mutation, and reject files outside the explicitly agreed problem scope.
 
 Then smoke-test the learning loop on both platforms:
 
-1. Run `/ducktutor:explain` against a small real issue.
-2. Confirm a meaningful design choice gets one prediction question while a trivial choice does not.
+1. Run `/ducktutor:start` against a small real issue; confirm it creates fresh task state and gives
+   a direct `/implement` handoff without repeating the task.
+2. Confirm `/start` asks one open-ended prediction or real trade-off question, not a trivia quiz.
 3. Apply the suggestion manually.
 4. Run `/ducktutor:review` and confirm it reads the actual diff.
 5. Confirm completion requires an open-ended, change-specific explanation in the developer's words.
@@ -180,7 +181,7 @@ Then smoke-test the learning loop on both platforms:
     `find -delete`, `find -exec`, and Git configuration writes remain blocked.
 16. Add nested project instructions, local skills, hooks, workflows, and a build manifest; confirm the
     context inventory returns paths only and DuckTutor reads only the relevant entries.
-17. Complete one task, then explain an unrelated task; confirm the old task and ownership map are
+17. Complete one task, then start an unrelated task; confirm the old task and ownership map are
     retired. Confirm a pending checkpoint blocks this transition and bare harness names are denied.
 
 Resume or compact an active task and confirm its task, phase, and ownership map return. When using a

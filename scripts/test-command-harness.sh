@@ -44,10 +44,11 @@ expect_failure() {
 
 expect_failure "implement requires a prior DuckTutor command" run_harness enter implement
 expect_failure "force-agent requires a prior DuckTutor command" run_harness enter implement --force-agent
-expect_success "guide command records engagement" run_harness enter explain
+expect_success "start command records engagement and creates a new task boundary" run_harness enter start --new-task
 expect_success "prior command unlocks implement" run_harness enter implement
 expect_success "prior command unlocks force-agent implement" run_harness enter implement --force-agent
 expect_failure "unknown implement flag is rejected" run_harness enter implement --force
+expect_failure "explain cannot claim a new task boundary" run_harness enter explain --new-task
 
 DUCKTUTOR_PROJECT_DIR="$PROJECT" "$STATE" begin "harness task" >/dev/null
 DUCKTUTOR_PROJECT_DIR="$PROJECT" "$STATE" phase predicted >/dev/null
@@ -56,7 +57,7 @@ DUCKTUTOR_PROJECT_DIR="$PROJECT" "$STATE" scope agent:src/app.js agent:test/app.
 state_after_begin="$(run_harness show)"
 if STATE_JSON="$state_after_begin" node -e '
   const state = JSON.parse(process.env.STATE_JSON);
-  if (!state.engagedCommands.includes("explain") || !state.engagedCommands.includes("implement")) process.exit(1);
+  if (!state.engagedCommands.includes("start") || !state.engagedCommands.includes("implement")) process.exit(1);
   if (state.activeCommand !== "implement") process.exit(1);
   if (state.implementationMode !== "force-agent" || state.learnerPaths.length !== 0) process.exit(1);
 '; then printf 'PASS harness: task begin preserves command engagement\n'; else
@@ -117,7 +118,7 @@ else
 fi
 
 expect_failure "entry gate blocks review while unanswered" run_harness enter review
-expect_failure "new task cannot bypass unanswered checkpoint" run_harness enter explain --new-task
+expect_failure "new task cannot bypass unanswered checkpoint" run_harness enter start --new-task
 expect_success "entry gate allows checkpoint" run_harness enter checkpoint
 expect_failure "checkpoint cannot clear without confirmation" run_harness checkpoint-pass
 expect_failure "pending checkpoint cannot be erased" env DUCKTUTOR_PROJECT_DIR="$PROJECT" "$STATE" clear
@@ -126,21 +127,21 @@ expect_success "commands resume after checkpoint" run_harness enter review
 expect_success "record completed attempt" env DUCKTUTOR_PROJECT_DIR="$PROJECT" "$STATE" phase attempted
 expect_success "record completed verification" env DUCKTUTOR_PROJECT_DIR="$PROJECT" "$STATE" phase verified
 expect_success "record completed explanation" env DUCKTUTOR_PROJECT_DIR="$PROJECT" "$STATE" phase explained developer-confirmed
-expect_failure "new-task flag is explain-only" run_harness enter review --new-task
-expect_success "new explain retires completed task" run_harness enter explain --new-task
+expect_failure "new-task flag is start-only" run_harness enter review --new-task
+expect_success "new start retires completed task" run_harness enter start --new-task
 
 new_task_state="$(run_harness show)"
 if STATE_JSON="$new_task_state" PROJECT_ROOT="$PROJECT" node -e '
   const state = JSON.parse(process.env.STATE_JSON);
   if (state.phase !== "idle" || state.task !== "") process.exit(1);
   if (state.learnerPaths.length || state.agentPaths.length || state.checkpointRequired) process.exit(1);
-  if (state.activeCommand !== "explain" || state.implementationMode !== "hybrid") process.exit(1);
-  if (!state.engagedCommands.includes("explain") || !state.engagedCommands.includes("implement")) process.exit(1);
+  if (state.activeCommand !== "start" || state.implementationMode !== "hybrid") process.exit(1);
+  if (!state.engagedCommands.includes("start") || !state.engagedCommands.includes("implement")) process.exit(1);
   if (state.repositoryRoot !== require("fs").realpathSync(process.env.PROJECT_ROOT) || !state.baselineHead) process.exit(1);
 '; then
-  printf 'PASS harness: new explain preserves engagement but clears unrelated task state\n'
+  printf 'PASS harness: new start preserves engagement but clears unrelated task state\n'
 else
-  printf 'FAIL harness: new explain preserves engagement but clears unrelated task state\n'
+  printf 'FAIL harness: new start preserves engagement but clears unrelated task state\n'
   FAILURES=$((FAILURES + 1))
 fi
 
