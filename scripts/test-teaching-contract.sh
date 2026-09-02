@@ -9,7 +9,7 @@ expect_text() {
   local name="$1"
   local pattern="$2"
   shift 2
-  if grep -Eiq "$pattern" "$@"; then
+  if grep -Eiq -- "$pattern" "$@"; then
     printf 'PASS teaching contract: %s\n' "$name"
   else
     printf 'FAIL teaching contract: %s\n' "$name"
@@ -36,6 +36,7 @@ done
 expect_text "session-start hook configured" 'SessionStart' "$ROOT/hooks/hooks.json"
 expect_text "post-edit checkpoint hook configured" 'PostToolUse' "$ROOT/hooks/hooks.json"
 expect_text "pending-checkpoint prompt gate configured" 'UserPromptSubmit' "$ROOT/hooks/hooks.json"
+expect_text "implement exposes explicit force-agent mode" '--force-agent' "$ROOT/commands/implement.md" "$ROOT/skills/tutor/SKILL.md"
 
 if node -e '
   const cases = require(process.argv[1]);

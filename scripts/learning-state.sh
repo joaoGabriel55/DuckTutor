@@ -42,6 +42,7 @@ const idle = {
   explanationConfirmedAt: null,
   engagedCommands: [],
   activeCommand: null,
+  implementationMode: "hybrid",
   checkpointRequired: false,
   checkpointRequestedAt: null,
   checkpointCompletedAt: null,
@@ -132,6 +133,7 @@ switch (command) {
       baselineHead: currentHead,
       engagedCommands: current.engagedCommands,
       activeCommand: current.activeCommand,
+      implementationMode: current.implementationMode,
       checkpointCompletedAt: current.checkpointCompletedAt,
     });
     break;
@@ -140,7 +142,10 @@ switch (command) {
     const current = readState();
     const entry = args[0];
     const commands = ["teach-me", "explain", "review", "hint", "checkpoint", "implement"];
-    if (args.length !== 1 || !commands.includes(entry)) fail("engage requires a DuckTutor command name");
+    const forceAgent = entry === "implement" && args.length === 2 && args[1] === "--force-agent";
+    if ((!forceAgent && args.length !== 1) || !commands.includes(entry)) {
+      fail("engage requires a DuckTutor command name; implement optionally accepts --force-agent");
+    }
     if (current.stale) fail(`state is stale: ${current.staleReason}; clear it before continuing`);
     if (current.checkpointRequired && entry !== "checkpoint") {
       fail("answer the required comprehension checkpoint before using another DuckTutor command");
@@ -155,6 +160,7 @@ switch (command) {
       baselineHead: current.baselineHead ?? currentHead,
       engagedCommands: [...new Set([...current.engagedCommands, entry])],
       activeCommand: entry,
+      implementationMode: entry === "implement" ? (forceAgent ? "force-agent" : "hybrid") : current.implementationMode,
     });
     break;
   }
@@ -207,7 +213,11 @@ switch (command) {
     }
     const overlap = learnerPaths.find((entry) => agentPaths.includes(entry));
     if (overlap) fail(`a path cannot have two owners: ${overlap}`);
-    if (learnerPaths.length === 0) fail("scope requires at least one learner-owned file");
+    if (current.implementationMode === "force-agent") {
+      if (agentPaths.length === 0) fail("force-agent scope requires at least one agent-owned file");
+    } else if (learnerPaths.length === 0) {
+      fail("scope requires at least one learner-owned file unless force-agent mode is active");
+    }
     writeState({ ...current, learnerPaths, agentPaths });
     break;
   }

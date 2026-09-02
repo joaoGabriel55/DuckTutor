@@ -43,18 +43,22 @@ expect_failure() {
 }
 
 expect_failure "implement requires a prior DuckTutor command" run_harness enter implement
+expect_failure "force-agent requires a prior DuckTutor command" run_harness enter implement --force-agent
 expect_success "guide command records engagement" run_harness enter explain
 expect_success "prior command unlocks implement" run_harness enter implement
+expect_success "prior command unlocks force-agent implement" run_harness enter implement --force-agent
+expect_failure "unknown implement flag is rejected" run_harness enter implement --force
 
 DUCKTUTOR_PROJECT_DIR="$PROJECT" "$STATE" begin "harness task" >/dev/null
 DUCKTUTOR_PROJECT_DIR="$PROJECT" "$STATE" phase predicted >/dev/null
-DUCKTUTOR_PROJECT_DIR="$PROJECT" "$STATE" scope learner:src/app.js agent:test/app.test.js >/dev/null
+DUCKTUTOR_PROJECT_DIR="$PROJECT" "$STATE" scope agent:src/app.js agent:test/app.test.js >/dev/null
 
 state_after_begin="$(run_harness show)"
 if STATE_JSON="$state_after_begin" node -e '
   const state = JSON.parse(process.env.STATE_JSON);
   if (!state.engagedCommands.includes("explain") || !state.engagedCommands.includes("implement")) process.exit(1);
   if (state.activeCommand !== "implement") process.exit(1);
+  if (state.implementationMode !== "force-agent" || state.learnerPaths.length !== 0) process.exit(1);
 '; then printf 'PASS harness: task begin preserves command engagement\n'; else
   printf 'FAIL harness: task begin preserves command engagement\n'
   FAILURES=$((FAILURES + 1))

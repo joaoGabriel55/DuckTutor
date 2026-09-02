@@ -4,8 +4,8 @@
 
 DuckTutor gives concise guidance for understanding a codebase, reasoning through an issue, and
 reviewing what changed. For each task, it separates learner-owned files from agent-editable support
-files. You write the load-bearing implementation; explicit `/implement` requests may change only the
-approved support files, with your approval.
+files. By default, you write the load-bearing implementation; explicit `/implement` requests may
+change approved files with your approval.
 
 DuckTutor supports both **Claude Code** and **Codex** from the same repository and tutoring skill.
 
@@ -21,6 +21,7 @@ technical judgment.
 - DuckTutor explains learner-owned code without dictating a transcription-ready solution.
 - Any prior non-implementation DuckTutor command unlocks an explicit `/implement` request; missing
   task, prediction, and ownership gates are completed inside that flow.
+- `/implement --force-agent` allows an approved all-agent map only after that prior tutoring command.
 - Each task has an approved learner-owned/agent-editable file map persisted in Git metadata.
 - DuckTutor may edit only agent-editable files through manually approved native edit operations.
 - Learner-owned and unscoped files are mechanically blocked.
@@ -97,11 +98,14 @@ skeleton, without dictating learner-owned code.
 
 Explain a load-bearing decision in your own words using the actual diff and observed behavior.
 
-### `/ducktutor:implement <problem or feature and optional file scope>`
+### `/ducktutor:implement [--force-agent] <problem or feature and optional file scope>`
 
 After using any other DuckTutor command, start or continue implementation. DuckTutor establishes any
 missing learning gates, guides learner-owned work, and may edit only approved agent-editable files.
 Every edit needs approval and ends with a required open-ended comprehension quiz.
+
+With `--force-agent`, DuckTutor may implement every file in a newly approved all-agent map. The flag
+is rejected until another DuckTutor command has run and never authorizes unscoped or destructive edits.
 
 ## Codex skill
 

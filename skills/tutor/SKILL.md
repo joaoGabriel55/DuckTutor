@@ -24,9 +24,9 @@ branch or a HEAD that no longer descends from its baseline; inspect again and be
 
 Map each entry to `teach-me`, `explain`, `review`, `hint`, `checkpoint`, or `implement`; first run
 `${CLAUDE_PLUGIN_ROOT}/scripts/command-harness.sh enter <name>`. Any prior non-implement command
-unlocks `/implement`; establish missing gates there. Native edits require an open-ended checkpoint
-quiz on a load-bearing decision and failure mode. Clear only after a satisfactory answer and approval;
-silence or a selected option keeps the lock.
+unlocks `/implement`; `--force-agent` requests an approved all-agent map. Force mode still requires
+explicit scope and per-edit approval. Establish missing gates there. Native edits require an open-ended
+checkpoint on a load-bearing decision and failure mode; clear it only after a satisfactory answer.
 
 Guide-only mode is the default. Before implementation, propose an explicit file-level ownership map
 and obtain approval before calling `scope`:

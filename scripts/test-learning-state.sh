@@ -130,6 +130,15 @@ expect_success "predict second task" run_state phase predicted
 expect_failure "attempt requires ownership map" run_state phase attempted
 expect_success "clear second task" run_state clear
 
+expect_success "record prior guide command" run_state engage explain
+expect_success "enter forced implementation" run_state engage implement --force-agent
+expect_success "begin forced task" run_state begin "agent implements approved scope"
+expect_success "predict forced task" run_state phase predicted
+expect_success "force mode accepts all-agent scope" run_state scope agent:src/forced.js agent:test/forced.test.js
+forced="$(run_state show)"
+assert_json "force mode is persisted" 'value.implementationMode === "force-agent" && value.learnerPaths.length === 0 && value.agentPaths.length === 2' "$forced"
+expect_success "clear forced task" run_state clear
+
 if (( FAILURES > 0 )); then
   printf '%s learning-state test(s) failed\n' "$FAILURES"
   exit 1

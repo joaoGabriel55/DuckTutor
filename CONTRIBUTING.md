@@ -25,6 +25,8 @@ Every user-facing change must preserve these rules:
     learning gates without redirecting the developer.
 13. Project instructions, skills, hooks, workflows, and manifests are discovered by path and used
     selectively without copying their contents into persistent state.
+14. Force-agent implementation requires prior tutoring and an explicit all-agent map; it never
+    bypasses file scope, edit approval, verification, or comprehension gates.
 
 The central behavioral contract lives in `skills/tutor/SKILL.md`. Keep commands focused on their
 entry-point-specific behavior instead of copying the entire contract into each prompt.
@@ -160,19 +162,21 @@ Then smoke-test the learning loop on both platforms:
    agent-editable native edit asks for approval.
 8. In a fresh repository, confirm `/ducktutor:implement` is initially locked; run any other DuckTutor
    command, then confirm implement opens and establishes missing task gates in-place.
-9. After an agent-owned edit, skip the quiz and confirm every other DuckTutor command is blocked;
+9. Confirm `/ducktutor:implement --force-agent` is also initially locked, then accepts an explicitly
+   approved all-agent map after another DuckTutor command without allowing unscoped edits.
+10. After an agent-owned edit, skip the quiz and confirm every other DuckTutor command is blocked;
    answer it correctly and confirm commands resume.
-10. Supply a documentation URL and confirm DuckTutor can fetch or search it without enabling an
+11. Supply a documentation URL and confirm DuckTutor can fetch or search it without enabling an
     unrelated external tool.
-11. Configure a disposable MCP test server and confirm a canonical `mcp__<server>__<tool>` call
+12. Configure a disposable MCP test server and confirm a canonical `mcp__<server>__<tool>` call
     reaches the host's normal permission flow while malformed MCP names remain blocked.
-12. With a browser MCP connected to a disposable local application, confirm DuckTutor can exercise
+13. With a browser MCP connected to a disposable local application, confirm DuckTutor can exercise
     one relevant flow and report the target, actions, expected result, and observed result.
-13. Ask DuckTutor to use an MCP filesystem tool to edit source or mutate an unrelated external
+14. Ask DuckTutor to use an MCP filesystem tool to edit source or mutate an unrelated external
     system and confirm the guard denies it even when the host exposes that tool.
-14. Confirm `ls`, `cat`, safe `find`, read-only `git config`, and `gh pr view` pass the guard while
+15. Confirm `ls`, `cat`, safe `find`, read-only `git config`, and `gh pr view` pass the guard while
     `find -delete`, `find -exec`, and Git configuration writes remain blocked.
-15. Add nested project instructions, local skills, hooks, workflows, and a build manifest; confirm the
+16. Add nested project instructions, local skills, hooks, workflows, and a build manifest; confirm the
     context inventory returns paths only and DuckTutor reads only the relevant entries.
 
 Resume or compact an active task and confirm its task, phase, and ownership map return. When using a

@@ -113,6 +113,8 @@ expect_allowed "project context inventory through plugin variable" '"${CLAUDE_PL
 expect_denied "unsupported project context command" "$PROJECT_CONTEXT scan"
 expect_allowed "command harness state read" "$HARNESS show"
 expect_allowed "command harness entry" "$HARNESS enter explain"
+expect_allowed "command harness forced implementation entry" "$HARNESS enter implement --force-agent"
+expect_denied "unknown command harness implementation flag" "$HARNESS enter implement --force"
 expect_allowed "command harness checkpoint requirement" "$HARNESS checkpoint-require"
 expect_command_asked "confirmed checkpoint completion" "$HARNESS checkpoint-pass developer-confirmed"
 expect_denied "unsupported command harness action" "$HARNESS bypass"
@@ -364,6 +366,25 @@ if [[ "$move_patch_output" == *'"permissionDecision":"deny"'* ]]; then
   printf 'PASS denied: patch move bypass\n'
 else
   printf 'FAIL denied: patch move bypass\n'
+  FAILURES=$((FAILURES + 1))
+fi
+
+DUCKTUTOR_PROJECT_DIR="$PROJECT" "$HARNESS" enter implement --force-agent >/dev/null
+DUCKTUTOR_PROJECT_DIR="$PROJECT" "$STATE" scope agent:docs/forced.js agent:test/app.test.js >/dev/null
+force_agent_payload='{"tool_name":"Write","tool_input":{"file_path":"docs/forced.js","content":"replacement"}}'
+force_agent_output="$(printf '%s' "$force_agent_payload" | guard tool)"
+if [[ "$force_agent_output" == *'"permissionDecision":"ask"'* ]]; then
+  printf 'PASS asked: force-agent mode edits an explicitly remapped source file\n'
+else
+  printf 'FAIL asked: force-agent mode edits an explicitly remapped source file\n'
+  FAILURES=$((FAILURES + 1))
+fi
+
+force_unscoped_output="$(printf '%s' "$outside_payload" | guard tool)"
+if [[ "$force_unscoped_output" == *'"permissionDecision":"deny"'* ]]; then
+  printf 'PASS denied: force-agent mode cannot edit unscoped files\n'
+else
+  printf 'FAIL denied: force-agent mode cannot edit unscoped files\n'
   FAILURES=$((FAILURES + 1))
 fi
 
