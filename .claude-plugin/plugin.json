@@ -1,14 +1,14 @@
 {
   "name": "ducktutor",
   "displayName": "DuckTutor",
-  "description": "A rubber-duck tutor for open source contributors. Teaches, explains, and reviews — but never writes the solution for you.",
-  "version": "0.1.0",
+  "description": "A concise Socratic pair tutor with project-native context, deterministic learning gates, and hybrid file ownership.",
+  "version": "0.11.0",
   "author": {
     "name": "Gabriel Quaresma",
-    "email": "gabriel.quaresma@codeminer42.com"
+    "email": "j.quaresmasantos98@gmail.com"
   },
-  "homepage": "https://github.com/<user>/ducktutor-plugin",
-  "repository": "https://github.com/<user>/ducktutor-plugin",
+  "homepage": "https://github.com/joaoGabriel55/DuckTutor",
+  "repository": "https://github.com/joaoGabriel55/DuckTutor",
   "license": "MIT",
   "keywords": [
     "education",
@@ -16,6 +16,8 @@
     "open-source",
     "code-review",
     "mentorship",
-    "anti-brain-rot"
+    "anti-brain-rot",
+    "socratic-learning",
+    "manual-approval"
   ]
 }

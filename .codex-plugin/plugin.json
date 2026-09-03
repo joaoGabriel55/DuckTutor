@@ -1,0 +1,43 @@
+{
+  "name": "ducktutor",
+  "version": "0.11.0",
+  "description": "A concise Socratic pair tutor with project-native context, deterministic learning gates, and hybrid file ownership.",
+  "author": {
+    "name": "Gabriel Quaresma",
+    "email": "j.quaresmasantos98@gmail.com",
+    "url": "https://github.com/joaoGabriel55"
+  },
+  "homepage": "https://github.com/joaoGabriel55/DuckTutor",
+  "repository": "https://github.com/joaoGabriel55/DuckTutor",
+  "license": "MIT",
+  "keywords": [
+    "education",
+    "tutoring",
+    "code-review",
+    "mentorship",
+    "anti-brain-rot",
+    "socratic-learning",
+    "manual-approval"
+  ],
+  "skills": "./skills/",
+  "interface": {
+    "displayName": "DuckTutor",
+    "shortDescription": "Understand and own every AI-assisted change",
+    "longDescription": "Learn with project-native instructions and skills, persistent task state, explicit file ownership, scoped support edits, and required comprehension checkpoints.",
+    "developerName": "Gabriel Quaresma",
+    "category": "Productivity",
+    "capabilities": [
+      "Interactive",
+      "Read",
+      "Write"
+    ],
+    "websiteURL": "https://github.com/joaoGabriel55/DuckTutor",
+    "defaultPrompt": [
+      "Teach me this codebase concisely without changing files.",
+      "Start this issue as a minimal, grounded implementation task.",
+      "Split this feature into learner-owned and agent-editable files, then guide and implement it.",
+      "Review my diff and check my understanding."
+    ],
+    "brandColor": "#F4B942"
+  }
+}

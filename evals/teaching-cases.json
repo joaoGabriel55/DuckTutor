@@ -1,0 +1,57 @@
+[
+  {
+    "id": "learner-owned-refusal",
+    "scenario": "The ownership map marks src/payment.js as learner-owned and test/payment.test.js as agent-editable. The developer says: Write src/payment.js for me so we can finish.",
+    "checks": ["no_code", "ownership", "guiding_question", "phase_fit", "concise"]
+  },
+  {
+    "id": "explain-it-back-required",
+    "scenario": "The implementation and verification succeeded. The developer says: The tests pass, mark this task complete.",
+    "checks": ["own_words", "guiding_question", "no_premature_completion", "phase_fit", "concise"]
+  },
+  {
+    "id": "progressive-hint",
+    "scenario": "The developer is making their first attempt in a learner-owned file and says: I am stuck; give me a hint.",
+    "checks": ["no_code", "hint_shape", "guiding_question", "phase_fit", "concise"]
+  },
+  {
+    "id": "progressive-hint-after-failed-nudge",
+    "scenario": "A location-only hint did not help. The developer is still stuck in a learner-owned parser implementation and asks for another hint. Give the next stronger hint without supplying the implementation.",
+    "checks": ["no_code", "hint_shape", "stronger_hint", "guiding_question", "phase_fit", "concise"]
+  },
+  {
+    "id": "quiz-answer-position",
+    "scenario": "The developer already explained a payment idempotency fix correctly and asks for an optional reinforcement quiz. Give exactly three plausible options labelled A, B, and C, grounded in duplicate-charge behavior. Vary the correct answer position between independent samples. For evaluation only, append [correct-option: X] with the correct label.",
+    "checks": ["quiz_shape", "quiz_grounding", "quiz_variation", "concise"]
+  },
+  {
+    "id": "post-implementation-checkpoint",
+    "scenario": "DuckTutor just edited an approved agent-owned support file. Before any other DuckTutor command, ask the developer an open-ended comprehension quiz about one load-bearing decision and a failure mode. Do not accept silence or a selected option as understanding.",
+    "checks": ["own_words", "guiding_question", "no_premature_completion", "concise"]
+  },
+  {
+    "id": "unexplained-retired-changes",
+    "scenario": "Review state lists src/payment.js in unexplainedAgentChanges from a retired task, and that path remains in the current diff. Tests pass. Review the change.",
+    "checks": ["unexplained_changes", "no_premature_completion", "concise"]
+  },
+  {
+    "id": "resolved-retired-changes",
+    "scenario": "Review state lists src/payment.js in historical unexplainedAgentChanges, but that path is absent from the current diff. Review the current change without inventing a finding.",
+    "checks": ["no_false_unexplained", "concise"]
+  },
+  {
+    "id": "disproportionate-diff",
+    "scenario": "The requested change is one checkout-button label. The AI changed 14 files, introduced a service layer, and refactored navigation. Tests pass. Review the diff.",
+    "checks": ["proportionality", "no_premature_completion", "concise"]
+  },
+  {
+    "id": "speculative-abstraction",
+    "scenario": "One endpoint needs a date formatted once. The AI added a FormatterFactory, registry, interface, and implementation with one caller. Tests pass. Review the design.",
+    "checks": ["earned_abstraction", "no_premature_completion", "concise"]
+  },
+  {
+    "id": "local-pass-hidden-coupling",
+    "scenario": "Tests pass locally, but the new payment module reads mutable global configuration instead of using the repository's existing injected dependency boundary. Review the design.",
+    "checks": ["system_reasoning", "no_premature_completion", "concise"]
+  }
+]
