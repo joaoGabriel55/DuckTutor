@@ -115,7 +115,7 @@ if grep -q '^## Approximate token benchmark$' "$ROOT/README.md" &&
    grep -q 'benchmark-tokens.mjs --samples 3' "$ROOT/README.md" &&
    grep -q 'aliases and functions' "$ROOT/README.md" &&
    grep -q 'prompt overhead' "$ROOT/README.md" &&
-   grep -q '^### Historical results — 2026-09-03 (v0.10.0, pre-optimization)$' "$ROOT/README.md" &&
+   grep -q '^### Results — 2026-09-03 (v0.11.0, post-optimization)$' "$ROOT/README.md" &&
    grep -q 'non-reproducible' "$ROOT/README.md" &&
    grep -q '^### Codex prompt optimization in v0.11.0$' "$ROOT/README.md" &&
    grep -q '^#### Codex Sol$' "$ROOT/README.md" &&
@@ -129,7 +129,7 @@ if grep -q '^## Approximate token benchmark$' "$ROOT/README.md" &&
    grep -q '\.background { fill: #0d1117; }' "$ROOT/docs/benchmark-output-comparison.svg" &&
    grep -q '\.baseline { stroke: #d29922; }' "$ROOT/docs/benchmark-output-comparison.svg" &&
    grep -q '\.ducktutor { stroke: #58a6ff; }' "$ROOT/docs/benchmark-output-comparison.svg" &&
-   grep -q '| Aggregate (total) | 11854 | 6609 | 5245 (44.2%) | -13910 |' "$ROOT/README.md" &&
+   grep -q '| Aggregate (total) | 12587 | 3951 | 8636 (68.6%) | -5173 |' "$ROOT/README.md" &&
    grep -qi 'model-call cost' "$ROOT/CONTRIBUTING.md"; then
   printf 'PASS token benchmark: user and contributor documentation disclose the trade-off\n'
 else

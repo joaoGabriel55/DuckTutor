@@ -37,35 +37,35 @@
 
   <text class="provider" x="70" y="78">Codex Sol</text>
   <text class="muted" x="18" y="190" transform="rotate(-90 18 190)">Output tokens</text>
-  <line class="grid" x1="70" y1="100" x2="950" y2="100"/>
-  <line class="grid" x1="70" y1="170" x2="950" y2="170"/>
-  <line class="grid" x1="70" y1="240" x2="950" y2="240"/>
+  <line class="grid" x1="70" y1="130" x2="950" y2="130"/>
+  <line class="grid" x1="70" y1="190" x2="950" y2="190"/>
+  <line class="grid" x1="70" y1="250" x2="950" y2="250"/>
   <line class="axis" x1="70" y1="310" x2="950" y2="310"/>
   <line class="axis" x1="70" y1="100" x2="70" y2="310"/>
-  <text class="muted" x="42" y="105">300</text>
-  <text class="muted" x="42" y="175">200</text>
-  <text class="muted" x="42" y="245">100</text>
+  <text class="muted" x="42" y="135">300</text>
+  <text class="muted" x="42" y="195">200</text>
+  <text class="muted" x="42" y="255">100</text>
   <text class="muted" x="56" y="315">0</text>
-  <polyline class="baseline" points="90,119 300,221 510,145 720,146 930,242"><title>Codex Sol baseline</title></polyline>
-  <polyline class="ducktutor" points="90,173 300,185 510,160 720,158 930,237"><title>Codex Sol DuckTutor</title></polyline>
-  <g class="baseline-point"><circle cx="90" cy="119" r="4"/><circle cx="300" cy="221" r="4"/><circle cx="510" cy="145" r="4"/><circle cx="720" cy="146" r="4"/><circle cx="930" cy="242" r="4"/></g>
-  <g class="ducktutor-point"><circle cx="90" cy="173" r="4"/><circle cx="300" cy="185" r="4"/><circle cx="510" cy="160" r="4"/><circle cx="720" cy="158" r="4"/><circle cx="930" cy="237" r="4"/></g>
+  <polyline class="baseline" points="90,115.6 300,240.6 510,157 720,176 930,252.4"><title>Codex Sol baseline</title></polyline>
+  <polyline class="ducktutor" points="90,199.8 300,221.6 510,220.6 720,196.8 930,243.2"><title>Codex Sol DuckTutor</title></polyline>
+  <g class="baseline-point"><circle cx="90" cy="115.6" r="4"/><circle cx="300" cy="240.6" r="4"/><circle cx="510" cy="157" r="4"/><circle cx="720" cy="176" r="4"/><circle cx="930" cy="252.4" r="4"/></g>
+  <g class="ducktutor-point"><circle cx="90" cy="199.8" r="4"/><circle cx="300" cy="221.6" r="4"/><circle cx="510" cy="220.6" r="4"/><circle cx="720" cy="196.8" r="4"/><circle cx="930" cy="243.2" r="4"/></g>
 
   <text class="provider" x="70" y="390">Claude Opus 5</text>
   <text class="muted" x="18" y="515" transform="rotate(-90 18 515)">Output tokens</text>
   <line class="grid" x1="70" y1="410" x2="950" y2="410"/>
-  <line class="grid" x1="70" y1="494" x2="950" y2="494"/>
-  <line class="grid" x1="70" y1="578" x2="950" y2="578"/>
+  <line class="grid" x1="70" y1="480" x2="950" y2="480"/>
+  <line class="grid" x1="70" y1="550" x2="950" y2="550"/>
   <line class="axis" x1="70" y1="620" x2="950" y2="620"/>
   <line class="axis" x1="70" y1="410" x2="70" y2="620"/>
-  <text class="muted" x="34" y="415">1000</text>
-  <text class="muted" x="42" y="499">600</text>
-  <text class="muted" x="42" y="583">200</text>
+  <text class="muted" x="34" y="415">1200</text>
+  <text class="muted" x="42" y="485">800</text>
+  <text class="muted" x="42" y="555">400</text>
   <text class="muted" x="56" y="625">0</text>
-  <polyline class="baseline" points="90,415 300,467 510,448 720,439 930,501"><title>Claude Opus 5 baseline</title></polyline>
-  <polyline class="ducktutor" points="90,528 300,527 510,516 720,513 930,554"><title>Claude Opus 5 DuckTutor</title></polyline>
-  <g class="baseline-point"><circle cx="90" cy="415" r="4"/><circle cx="300" cy="467" r="4"/><circle cx="510" cy="448" r="4"/><circle cx="720" cy="439" r="4"/><circle cx="930" cy="501" r="4"/></g>
-  <g class="ducktutor-point"><circle cx="90" cy="528" r="4"/><circle cx="300" cy="527" r="4"/><circle cx="510" cy="516" r="4"/><circle cx="720" cy="513" r="4"/><circle cx="930" cy="554" r="4"/></g>
+  <polyline class="baseline" points="90,433.5 300,494.7 510,481.8 720,448.3 930,507.6"><title>Claude Opus 5 baseline</title></polyline>
+  <polyline class="ducktutor" points="90,574.5 300,569.4 510,579.4 720,569 930,577.2"><title>Claude Opus 5 DuckTutor</title></polyline>
+  <g class="baseline-point"><circle cx="90" cy="433.5" r="4"/><circle cx="300" cy="494.7" r="4"/><circle cx="510" cy="481.8" r="4"/><circle cx="720" cy="448.3" r="4"/><circle cx="930" cy="507.6" r="4"/></g>
+  <g class="ducktutor-point"><circle cx="90" cy="574.5" r="4"/><circle cx="300" cy="569.4" r="4"/><circle cx="510" cy="579.4" r="4"/><circle cx="720" cy="569" r="4"/><circle cx="930" cy="577.2" r="4"/></g>
 
   <g class="muted" text-anchor="middle">
     <text x="90" y="650">Explain</text>
@@ -75,5 +75,5 @@
     <text x="930" y="650">Understanding</text>
   </g>
   <text class="muted" x="510" y="692" text-anchor="middle">Benchmark scenario</text>
-  <text class="muted" x="70" y="730">Per-pair averages · 3 samples per scenario · 2026-09-03 · DuckTutor v0.10.0</text>
+  <text class="muted" x="70" y="730">Per-pair averages · 3 samples per scenario · 2026-09-03 · DuckTutor v0.11.0</text>
 </svg>

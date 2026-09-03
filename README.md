@@ -103,13 +103,13 @@ on the model, CLI configuration, prompt caching, and sampling, and are not
 billing measurements. The benchmark does not quantify the additional value of a smaller diff,
 earlier design rejection, or developer understanding.
 
-### Historical results — 2026-09-03 (v0.10.0, pre-optimization)
+### Results — 2026-09-03 (v0.11.0, post-optimization)
 
 These three-sample runs compare the same five prompts and report per-pair averages, except for the
 aggregate rows, which report all 15 calls per mode. “Net saved” subtracts the measured DuckTutor
 prompt input overhead; it still excludes command prompts, restored context, task state, and hook messages.
 Because the supplied labels did not record complete CLI settings, these results are non-reproducible
-historical observations, not product claims or a comparison baseline for v0.11.0.
+observations rather than product claims.
 
 #### Codex Sol
 
@@ -118,12 +118,12 @@ so an exact reproduction requires a new run with a more specific label.
 
 | Scenario | Baseline output | DuckTutor output | Output saved | Net saved |
 | --- | ---: | ---: | ---: | ---: |
-| Explain approach | 272.7 | 195.7 | 77.0 (28.2%) | -1200 |
-| Diff proportionality | 127.7 | 178.7 | -51.0 (-39.9%) | -1328 |
-| Premature abstraction | 235.7 | 214.0 | 21.7 (9.2%) | -1255.3 |
-| Reasoning and coupling | 234.3 | 216.7 | 17.7 (7.5%) | -1259.3 |
-| Understanding over output | 97.3 | 104.7 | -7.3 (-7.5%) | -1284.3 |
-| Aggregate (total) | 2903 | 2729 | 174 (6.0%) | -18981 |
+| Explain approach | 324 | 183.7 | 140.3 (43.3%) | -780.7 |
+| Diff proportionality | 115.7 | 147.3 | -31.7 (-27.4%) | -952.7 |
+| Premature abstraction | 255 | 149 | 106 (41.6%) | -814 |
+| Reasoning and coupling | 223.3 | 188.7 | 34.7 (15.5%) | -886.3 |
+| Understanding over output | 96 | 111.3 | -15.3 (-16.0%) | -935.3 |
+| Aggregate (total) | 3042 | 2340 | 702 (23.1%) | -13107 |
 
 #### Claude Opus 5
 
@@ -132,23 +132,22 @@ recorded, so an exact reproduction requires a new run with a more specific label
 
 | Scenario | Baseline output | DuckTutor output | Output saved | Net saved |
 | --- | ---: | ---: | ---: | ---: |
-| Explain approach | 974.0 | 438.7 | 535.3 (55.0%) | -741.7 |
-| Diff proportionality | 729.7 | 445.3 | 284.3 (39.0%) | -992.7 |
-| Premature abstraction | 820.7 | 494.3 | 326.3 (39.8%) | -950.7 |
-| Reasoning and coupling | 862.3 | 509.7 | 352.7 (40.9%) | -924.3 |
-| Understanding over output | 564.7 | 315.0 | 249.7 (44.2%) | -1027.3 |
-| Aggregate (total) | 11854 | 6609 | 5245 (44.2%) | -13910 |
+| Explain approach | 1066 | 260 | 806 (75.6%) | -115 |
+| Diff proportionality | 716 | 289.3 | 426.7 (59.6%) | -494.3 |
+| Premature abstraction | 790 | 232 | 558 (70.6%) | -362 |
+| Reasoning and coupling | 981.3 | 291.3 | 690 (70.3%) | -231.0 |
+| Understanding over output | 642.3 | 244.3 | 398 (62.0%) | -522 |
+| Aggregate (total) | 12587 | 3951 | 8636 (68.6%) | -5173 |
 
 The chart plots baseline and DuckTutor output for every scenario. Each provider has its own scale so
 the shape of both series remains readable; the legend identifies each line by name and color.
 
 ![Baseline and DuckTutor output-token line charts for Codex Sol and Claude Opus 5](docs/benchmark-output-comparison.svg)
 
-Claude Opus 5 reduced output by 44.2% overall, while Codex Sol reduced it by 6.0% and produced more
+Claude Opus 5 reduced output by 68.6% overall, while Codex Sol reduced it by 23.1% and produced more
 text in two scenarios. Neither run achieved positive net token savings because the DuckTutor prompt
-added 1,277 approximate input tokens to every comparison. DuckTutor's purpose is behavioral:
-encouraging smaller, explainable changes. These historical observations do not establish total-token
-efficiency.
+added about 920–921 approximate input tokens to every comparison. DuckTutor's purpose is behavioral:
+encouraging smaller, explainable changes. These observations do not establish total-token efficiency.
 
 ### Codex prompt optimization in v0.11.0
 
@@ -157,7 +156,8 @@ simple verdict scenarios produced more output. Version 0.11.0 therefore compress
 from 672 to 449 words, caps routine answers at 120 words and simple verdicts at 80, and tells the
 model not to restate supplied facts. On the same benchmark inputs, estimated DuckTutor prompt
 overhead falls from 1,277 to about 921 tokens per call—approximately 356 tokens (27.9%) less. This is an
-input-only estimate; new output and net-savings claims require rerunning the live benchmark.
+input-only estimate. The post-optimization results above show the measured output and net savings
+from the subsequent live benchmark runs.
 
 ## Claude Code commands
 
