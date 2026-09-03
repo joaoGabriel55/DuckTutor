@@ -66,10 +66,23 @@ STATE_JSON="$STATE_JSON" PROJECT_CONTEXT_JSON="$PROJECT_CONTEXT_JSON" node -e '
       `Implementation mode: ${state.implementationMode || "hybrid"}`,
       `Learner-owned files: ${learner}`,
       `Agent-editable files: ${agent}`,
-      `Comprehension checkpoint: ${state.checkpointRequired ? "required before another DuckTutor command" : "clear"}`,
-      ...(state.checkpointRequired ? ["This checkpoint persists across sessions. Use /ducktutor:checkpoint to answer or /ducktutor:checkpoint --abandon to explicitly discard the task."] : []),
+      `Comprehension checkpoint: ${state.checkpointRequired ? "required to continue the current task" : "clear"}`,
+      ...(state.checkpointRequired ? ["This checkpoint persists across sessions. Use /ducktutor:checkpoint to answer, /ducktutor:checkpoint --abandon to explicitly discard the task, or /ducktutor:start <new task> to retire it and begin fresh."] : []),
       "Read the current diff before advancing state. Never edit learner-owned or unscoped files.",
     ].join("\n"));
+  }
+  if (state.unexplainedAgentChanges?.length) {
+    const totalPaths = state.unexplainedAgentChanges.reduce((total, change) => total + change.paths.length, 0);
+    let remaining = 12;
+    const retired = [];
+    for (const change of state.unexplainedAgentChanges) {
+      const paths = change.paths.slice(0, remaining);
+      if (paths.length) retired.push({ task: change.task, paths });
+      remaining -= paths.length;
+      if (!remaining) break;
+    }
+    const omitted = totalPaths - (12 - remaining);
+    sections.push(`Unexplained agent changes from retired tasks: ${JSON.stringify(retired)}${omitted ? ` (+${omitted} more paths)` : ""}. During /review, flag these still-dirty paths.`);
   }
   process.stdout.write(JSON.stringify({
     hookSpecificOutput: {

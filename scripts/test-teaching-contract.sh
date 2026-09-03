@@ -27,6 +27,7 @@ expect_text "explain remains understanding-only" 'Do not begin task state' "$ROO
 expect_text "start offers a direct hybrid handoff" '/ducktutor:implement`' "$ROOT/commands/start.md"
 expect_text "start offers an explicit all-agent handoff" '/ducktutor:implement --force-agent' "$ROOT/commands/start.md"
 expect_text "implement can reuse the prepared task" 'Use the prepared task' "$ROOT/commands/implement.md"
+expect_text "review surfaces unexplained retired changes" 'unexplainedAgentChanges' "$ROOT/commands/review.md"
 
 if grep -ERq '`(command-harness|learning-state)\.sh' "$ROOT/commands"; then
   printf 'FAIL teaching contract: command prompts contain a bare internal script invocation\n'
@@ -59,7 +60,11 @@ if node -e '
   if (!ids.has("learner-owned-refusal") || !ids.has("explain-it-back-required") ||
       !ids.has("progressive-hint-after-failed-nudge") || !checks.has("no_code") ||
       !ids.has("quiz-answer-position") || !ids.has("post-implementation-checkpoint") ||
+      !ids.has("unexplained-retired-changes") || !ids.has("resolved-retired-changes") || !ids.has("disproportionate-diff") ||
+      !ids.has("speculative-abstraction") || !ids.has("local-pass-hidden-coupling") ||
       !checks.has("own_words") || !checks.has("phase_fit") ||
+      !checks.has("unexplained_changes") || !checks.has("no_false_unexplained") || !checks.has("proportionality") ||
+      !checks.has("earned_abstraction") || !checks.has("system_reasoning") ||
       !checks.has("stronger_hint") || !checks.has("quiz_variation") ||
       !checks.has("no_premature_completion")) process.exit(1);
 ' "$ROOT/evals/teaching-cases.json"; then

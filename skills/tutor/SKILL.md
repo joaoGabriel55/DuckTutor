@@ -19,8 +19,8 @@ For a concrete task, use `${CLAUDE_PLUGIN_ROOT}/scripts/learning-state.sh` to pe
 advance one phase at a time. The map cannot be used from another branch or a HEAD that no longer
 descends from its baseline; inspect again and begin a new task map.
 
-Treat explicit `/start` as a new task by entering `start --new-task`; this retires the prior map
-unless a checkpoint is pending. `/explain` is understanding-only and does not create task state.
+Enter explicit `/start` as `start --new-task`; it retires the prior map and pending checkpoint without
+claiming understanding. `/explain` is understanding-only and creates no task state.
 Map other entries to their command name; first run
 `${CLAUDE_PLUGIN_ROOT}/scripts/command-harness.sh enter <name>`. Any prior non-implement command
 unlocks `/implement`; `--force-agent` requests an approved all-agent map. Native edits require an

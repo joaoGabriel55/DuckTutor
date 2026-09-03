@@ -12,7 +12,7 @@ Every user-facing change must preserve these rules:
 4. Reviews inspect the actual applied diff and surrounding code.
 5. Responses are concise by default and expand only for requested depth, complexity, or risk.
 6. Agent edits require an open-ended comprehension quiz; its unanswered checkpoint blocks every
-   other DuckTutor command.
+   other DuckTutor command except an explicit fresh `/start`.
 7. Passing tests never substitutes for understanding.
 8. Web research stays tied to user-supplied content or facts materially needed by the task.
 9. Host-configured MCP tools may collect scoped verification evidence; MCP file mutation is denied
@@ -81,7 +81,9 @@ The state module persists command engagement, one task, its ownership map, and c
 Git metadata. The deterministic harness gates command entry. The guard denies
 learner-owned and unscoped edits, approval-gates agent-editable native edits, and blocks mutation
 bypasses. Hooks inventory project-native context, restore state, require post-edit comprehension, and
-block other DuckTutor commands until the checkpoint is answered.
+block other DuckTutor commands until the checkpoint is answered, except that an explicit `/start`
+retires the pending task and creates a fresh boundary. Retired agent-edited paths remain in state so
+review can flag unexplained changes that still appear in the working diff.
 
 ## Developing locally
 
@@ -170,10 +172,11 @@ Then smoke-test the learning loop on both platforms:
    command, then confirm implement opens and establishes missing task gates in-place.
 9. Confirm `/ducktutor:implement --force-agent` is also initially locked, then accepts an explicitly
    approved all-agent map after another DuckTutor command without allowing unscoped edits.
-10. After an agent-owned edit, skip the quiz and confirm every other DuckTutor command is blocked;
-   answer it correctly and confirm commands resume.
-11. In a new session with a pending checkpoint, confirm the recovery message offers answer or
-    explicit abandonment. Confirm abandonment requires approval and never records understanding.
+10. After an agent-owned edit, skip the quiz and confirm every other DuckTutor command except an
+    explicit fresh `/start` is blocked; answer it correctly and confirm commands resume.
+11. In a new session with a pending checkpoint, confirm the recovery message offers an answer,
+    explicit abandonment, or a fresh `/start`. Confirm abandonment requires approval and neither
+    abandonment nor fresh start records understanding.
 12. Supply a documentation URL and confirm DuckTutor can fetch or search it without enabling an
     unrelated external tool.
 13. Configure a disposable MCP test server and confirm a canonical `mcp__<server>__<tool>` call
@@ -186,8 +189,9 @@ Then smoke-test the learning loop on both platforms:
     `find -delete`, `find -exec`, and Git configuration writes remain blocked.
 17. Add nested project instructions, local skills, hooks, workflows, and a build manifest; confirm the
     context inventory returns paths only and DuckTutor reads only the relevant entries.
-18. Complete one task, then start an unrelated task; confirm the old task and ownership map are
-    retired. Confirm a pending checkpoint blocks this transition and bare harness names are denied.
+18. Start an unrelated task with and without a pending checkpoint; confirm the old task and ownership
+    map are retired, a skipped checkpoint does not record understanding, and bare harness names are
+    denied.
 
 Resume or compact an active task and confirm its task, phase, and ownership map return. When using a
 quiz, ground it in the actual change and vary the correct option's position; it never replaces the

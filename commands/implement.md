@@ -24,5 +24,5 @@ Once implementation is present, run
 `"${CLAUDE_PLUGIN_ROOT}/scripts/command-harness.sh" checkpoint-require`; the post-edit hook does
 this automatically for native edits. Inspect the diff, then ask one open-ended quiz about a
 load-bearing decision and failure mode. Wait for a satisfactory answer before requesting
-`"${CLAUDE_PLUGIN_ROOT}/scripts/command-harness.sh" checkpoint-pass developer-confirmed`; no answer
-leaves every other DuckTutor command locked.
+`"${CLAUDE_PLUGIN_ROOT}/scripts/command-harness.sh" checkpoint-pass developer-confirmed`; without an
+answer, only `/checkpoint` and fresh `/start` remain.

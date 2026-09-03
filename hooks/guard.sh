@@ -122,6 +122,26 @@ check_git_config() {
   fi
 }
 
+check_git_grep() {
+  local command="$1"
+  local normalized="$command"
+  local rest arg
+  local -a args
+  normalized="${normalized//\\/}"
+  normalized="${normalized//\'/}"
+  normalized="${normalized//\"/}"
+  rest="${normalized#git grep}"
+  read -r -a args <<< "$rest"
+
+  for arg in "${args[@]}"; do
+    case "$arg" in
+      -O|-O*|--open*|--textc*|--ext*)
+        deny "DuckTutor allows git grep for direct inspection only. Pagers, text-conversion filters, and external grep processes are blocked."
+        ;;
+    esac
+  done
+}
+
 check_bash() {
   local command state_script state_script_variable state_args state_action context_script context_script_variable harness_script harness_script_variable harness_args
   command="$(extract_field command 2>/dev/null || true)"
@@ -225,6 +245,10 @@ check_bash() {
       ;;
     git\ config|git\ config\ *)
       check_git_config "$command"
+      return 0
+      ;;
+    git\ grep|git\ grep\ *)
+      check_git_grep "$command"
       return 0
       ;;
     *)

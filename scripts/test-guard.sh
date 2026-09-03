@@ -66,6 +66,7 @@ expect_allowed "working tree status" "git status --short"
 expect_allowed "unstaged diff" "git diff"
 expect_allowed "staged diff" "git diff --staged"
 expect_allowed "commit context" "git log --oneline -5"
+expect_allowed "tracked content search" 'git grep -n "DropdownComponent.new" -- app/views app/components'
 expect_allowed "issue inspection" "gh issue view 42 --comments"
 expect_allowed "pull request inspection" "gh pr view 42 --comments"
 expect_allowed "directory listing" "ls -la skills"
@@ -91,6 +92,9 @@ expect_denied "global Git config value set" "git config --global user.email tuto
 expect_denied "Git config unset" "git config --unset user.name"
 expect_denied "Git config set action" "git config set user.name DuckTutor"
 expect_denied "Git config editor" "git config --edit"
+expect_denied "Git grep text conversion" "git grep --textconv password"
+expect_denied "Git grep external process" "git grep --ext-grep password"
+expect_denied "Git grep pager process" "git grep -O less password"
 
 expect_command_asked() {
   local name="$1"

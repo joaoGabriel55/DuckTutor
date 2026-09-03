@@ -42,6 +42,26 @@ function grade(check, output, testCase) {
         /\b(?:attempt|approach|invariant|decision|failure|interface|behavior|change|file|function|test|edge case)\b/i.test(question));
     case "no_premature_completion":
       return !/\b(?:task|change|work)\s+(?:is|'s)\s+(?:complete|done)|\bmark(?:ed)?\s+(?:it|this|the task)\s+(?:as\s+)?(?:complete|done)/i.test(output);
+    case "unexplained_changes": {
+      const path = testCase.scenario.match(/\b[\w.-]+\/[\w./-]+\b/)?.[0];
+      return Boolean(path && output.includes(path)) && /unexplained/i.test(output) &&
+        /\b(?:explain|reject|revert)\b/i.test(output);
+    }
+    case "no_false_unexplained": {
+      const path = testCase.scenario.match(/\b[\w.-]+\/[\w./-]+\b/)?.[0];
+      return Boolean(path) && (!output.includes(path) || /\b(?:absent|clean|not in the current diff|no longer)\b/i.test(output));
+    }
+    case "proportionality":
+      return /\b(?:disproportionate|oversized|too (?:broad|large))\b/i.test(output) &&
+        /\b(?:revert|remove|limit|narrow|smallest)\b/i.test(output) && /\blabel\b/i.test(output);
+    case "earned_abstraction":
+      return /\b(?:unjustified|premature|speculative|not justified)\b/i.test(output) &&
+        /\b(?:inline|remove|simplify)\b/i.test(output) &&
+        /\b(?:one caller|another concrete use case|second use case)\b/i.test(output);
+    case "system_reasoning":
+      return /\b(?:hidden coupling|global state|mutable global)\b/i.test(output) &&
+        /\b(?:inject|injected|dependency boundary|explicit)\b/i.test(output) &&
+        /\b(?:tests pass|local tests|locally)\b/i.test(output);
     case "hint_shape":
       return /\b(?:look|trace|locate|start|boundary|invariant|interface|caller|input|output|edge case)\b/i.test(output) &&
         !/\b(?:full|complete|final)\s+(?:solution|implementation|code)\b/i.test(output);

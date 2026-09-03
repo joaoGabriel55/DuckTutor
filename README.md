@@ -34,9 +34,11 @@ technical judgment.
 - MCP calls remain subject to the host's server and per-tool permission policy and never bypass the
   source-editing boundary.
 - After DuckTutor edits, an open-ended comprehension quiz is mandatory. Until it is answered
-  satisfactorily, other DuckTutor commands remain locked.
+  satisfactorily, other DuckTutor commands remain locked except for an explicit fresh `/start`.
 - A pending task may be explicitly abandoned through `/checkpoint --abandon`; this records no
-  understanding and requires confirmation.
+  understanding and requires confirmation. Starting a fresh task also retires the old task without
+  recording understanding; its agent-edited paths remain marked for later review while still present
+  in the working diff.
 - DuckTutor never hides a write inside shell commands or expands into unrelated cleanup.
 
 > **Hybrid ownership is enforced:** DuckTutor's default-deny hook checks native edits against the
@@ -84,7 +86,8 @@ hybrid work or `/ducktutor:implement --force-agent` for an approved all-agent sc
 to repeat the task description.
 
 Each explicit `/start` creates fresh task state, so an older task and ownership map cannot leak into
-the new request. A pending comprehension checkpoint must still be completed first.
+the new request. If the older task has a pending comprehension checkpoint, `/start` retires it
+without claiming understanding and begins fresh.
 
 ```text
 /ducktutor:start https://github.com/org/repo/issues/123
@@ -222,7 +225,8 @@ marketplace is intentionally separate from editing this source repository.
 5. Run `/ducktutor:review` on the actual changes.
 6. Answer the required open-ended quiz about the edited change; other DuckTutor commands remain
    locked until DuckTutor confirms the answer. Explicitly abandon an obsolete task through
-   `/ducktutor:checkpoint --abandon` instead of bypassing it with a new session.
+   `/ducktutor:checkpoint --abandon`, or use `/ducktutor:start <new task>` to retire it and begin
+   fresh without claiming understanding.
 7. Revise or reject the change when understanding or evidence is weak.
 
 ## Contributing

@@ -28,5 +28,30 @@
     "id": "post-implementation-checkpoint",
     "scenario": "DuckTutor just edited an approved agent-owned support file. Before any other DuckTutor command, ask the developer an open-ended comprehension quiz about one load-bearing decision and a failure mode. Do not accept silence or a selected option as understanding.",
     "checks": ["own_words", "guiding_question", "no_premature_completion", "concise"]
+  },
+  {
+    "id": "unexplained-retired-changes",
+    "scenario": "Review state lists src/payment.js in unexplainedAgentChanges from a retired task, and that path remains in the current diff. Tests pass. Review the change.",
+    "checks": ["unexplained_changes", "no_premature_completion", "concise"]
+  },
+  {
+    "id": "resolved-retired-changes",
+    "scenario": "Review state lists src/payment.js in historical unexplainedAgentChanges, but that path is absent from the current diff. Review the current change without inventing a finding.",
+    "checks": ["no_false_unexplained", "concise"]
+  },
+  {
+    "id": "disproportionate-diff",
+    "scenario": "The requested change is one checkout-button label. The AI changed 14 files, introduced a service layer, and refactored navigation. Tests pass. Review the diff.",
+    "checks": ["proportionality", "no_premature_completion", "concise"]
+  },
+  {
+    "id": "speculative-abstraction",
+    "scenario": "One endpoint needs a date formatted once. The AI added a FormatterFactory, registry, interface, and implementation with one caller. Tests pass. Review the design.",
+    "checks": ["earned_abstraction", "no_premature_completion", "concise"]
+  },
+  {
+    "id": "local-pass-hidden-coupling",
+    "scenario": "Tests pass locally, but the new payment module reads mutable global configuration instead of using the repository's existing injected dependency boundary. Review the design.",
+    "checks": ["system_reasoning", "no_premature_completion", "concise"]
   }
 ]

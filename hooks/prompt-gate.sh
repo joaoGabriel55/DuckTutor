@@ -24,8 +24,10 @@ fi
 
 COMMAND="$(PROMPT_VALUE="$PROMPT" node -e '
   const prompt = process.env.PROMPT_VALUE || "";
+  const freshStart = /^\s*\/(?:ducktutor:)?start(?:\s|$)/i.test(prompt);
   const slash = prompt.match(/(?:^|\s)\/(?:ducktutor:)?(teach-me|start|explain|review|hint|checkpoint|implement)\b/i);
-  if (slash) process.stdout.write(slash[1].toLowerCase());
+  if (freshStart) process.stdout.write("start-new-task");
+  else if (slash) process.stdout.write(slash[1].toLowerCase());
   else {
     const skill = prompt.match(/\$ducktutor:tutor\b([\s\S]*)/i);
     if (skill) {
@@ -35,13 +37,13 @@ COMMAND="$(PROMPT_VALUE="$PROMPT" node -e '
   }
 ')"
 
-[[ -n "$COMMAND" && "$COMMAND" != "checkpoint" ]] || exit 0
+[[ -n "$COMMAND" && "$COMMAND" != "checkpoint" && "$COMMAND" != "start-new-task" ]] || exit 0
 
 STATE_JSON="$STATE_JSON" node -e '
   const state = JSON.parse(process.env.STATE_JSON);
   const task = state.task ? ` for task ${JSON.stringify(state.task)}` : "";
   process.stdout.write(JSON.stringify({
     decision: "block",
-    reason: `DuckTutor has a pending comprehension checkpoint${task}. It persists across sessions. Run /ducktutor:checkpoint to answer, or /ducktutor:checkpoint --abandon to explicitly discard the task without claiming understanding.`,
+    reason: `DuckTutor has a pending comprehension checkpoint${task}. It persists across sessions. Run /ducktutor:checkpoint to answer, /ducktutor:checkpoint --abandon to explicitly discard the task, or /ducktutor:start <new task> to begin fresh without claiming understanding of the old task.`,
   }) + "\n");
 '

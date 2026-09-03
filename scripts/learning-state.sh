@@ -48,6 +48,7 @@ const idle = {
   checkpointCompletedAt: null,
   lastAbandonedTask: null,
   lastAbandonedAt: null,
+  unexplainedAgentChanges: [],
   updatedAt: null,
   stale: false,
   staleReason: null,
@@ -74,7 +75,8 @@ function withFreshness(value) {
 function readState() {
   try {
     const value = JSON.parse(fs.readFileSync(statePath, "utf8"));
-    if (value.schema !== 1 || !Array.isArray(value.learnerPaths) || !Array.isArray(value.agentPaths)) {
+    if (value.schema !== 1 || !Array.isArray(value.learnerPaths) || !Array.isArray(value.agentPaths) ||
+        (value.unexplainedAgentChanges !== undefined && !Array.isArray(value.unexplainedAgentChanges))) {
       fail("stored state has an unsupported shape");
     }
     return withFreshness({
@@ -82,6 +84,7 @@ function readState() {
       ...value,
       engagedCommands: Array.isArray(value.engagedCommands) ? value.engagedCommands : [],
       checkpointRequired: value.checkpointRequired === true,
+      unexplainedAgentChanges: activeUnexplainedChanges(value.unexplainedAgentChanges || []),
     });
   } catch (error) {
     if (error.code === "ENOENT") return { ...idle };
@@ -115,6 +118,68 @@ function normalizeProjectPath(raw) {
   return path.posix.normalize(value);
 }
 
+function workingTreePaths() {
+  const result = spawnSync("git", ["-C", repositoryRoot, "status", "--porcelain=v1", "-z", "--untracked-files=all"], {
+    encoding: "utf8",
+  });
+  if (result.status !== 0) return new Set();
+  const entries = result.stdout.split("\0").filter(Boolean);
+  const changed = new Set();
+  for (let index = 0; index < entries.length; index += 1) {
+    const entry = entries[index];
+    changed.add(entry.slice(3).replaceAll("\\", "/"));
+    if (/[RC]/.test(entry.slice(0, 2)) && entries[index + 1]) {
+      changed.add(entries[index + 1].replaceAll("\\", "/"));
+      index += 1;
+    }
+  }
+  return changed;
+}
+
+function activeUnexplainedChanges(records) {
+  if (!records.length) return [];
+  const changed = workingTreePaths();
+  const seen = new Set();
+  const validBaselines = new Map();
+  const active = [];
+  for (const record of [...records].reverse()) {
+    if (!record || typeof record.task !== "string" || record.branch !== currentBranch ||
+        typeof record.retiredAt !== "string" || !Array.isArray(record.paths)) continue;
+    const baseline = record.baselineHead ?? null;
+    if (!validBaselines.has(baseline)) {
+      const valid = baseline && currentHead
+        ? spawnSync("git", ["-C", repositoryRoot, "merge-base", "--is-ancestor", baseline, currentHead]).status === 0
+        : baseline === currentHead;
+      validBaselines.set(baseline, valid);
+    }
+    if (!validBaselines.get(baseline)) continue;
+    const paths = record.paths.filter((candidate) =>
+      typeof candidate === "string" && changed.has(candidate) && !seen.has(candidate));
+    paths.forEach((candidate) => seen.add(candidate));
+    if (paths.length) active.push({ ...record, paths });
+  }
+  return active.reverse();
+}
+
+function retirePendingTask(state) {
+  const retiredAt = new Date().toISOString();
+  const changed = state.stale ? new Set() : workingTreePaths();
+  const paths = state.agentPaths.filter((candidate) => changed.has(candidate));
+  return {
+    lastAbandonedTask: state.task,
+    lastAbandonedAt: retiredAt,
+    unexplainedAgentChanges: paths.length
+      ? [...state.unexplainedAgentChanges, {
+          task: state.task,
+          paths,
+          branch: state.branch,
+          baselineHead: state.baselineHead,
+          retiredAt,
+        }]
+      : state.unexplainedAgentChanges,
+  };
+}
+
 switch (command) {
   case "show":
     process.stdout.write(`${JSON.stringify(readState())}\n`);
@@ -139,6 +204,7 @@ switch (command) {
       checkpointCompletedAt: current.checkpointCompletedAt,
       lastAbandonedTask: current.lastAbandonedTask,
       lastAbandonedAt: current.lastAbandonedAt,
+      unexplainedAgentChanges: current.unexplainedAgentChanges,
     });
     break;
   }
@@ -151,10 +217,12 @@ switch (command) {
     if ((!forceAgent && !newTask && args.length !== 1) || !commands.includes(entry)) {
       fail("engage requires a DuckTutor command name; implement accepts --force-agent and start accepts --new-task");
     }
-    if (current.checkpointRequired && entry !== "checkpoint") {
+    if (current.checkpointRequired && entry !== "checkpoint" && !newTask) {
       fail("answer the required comprehension checkpoint before using another DuckTutor command");
     }
     if (newTask) {
+      const retiresPendingTask = current.checkpointRequired && Boolean(current.task);
+      const retired = retiresPendingTask ? retirePendingTask(current) : null;
       writeState({
         ...idle,
         repositoryRoot,
@@ -162,8 +230,9 @@ switch (command) {
         baselineHead: currentHead,
         engagedCommands: [...new Set([...current.engagedCommands, entry])],
         activeCommand: entry,
-        lastAbandonedTask: current.lastAbandonedTask,
-        lastAbandonedAt: current.lastAbandonedAt,
+        lastAbandonedTask: retired?.lastAbandonedTask ?? current.lastAbandonedTask,
+        lastAbandonedAt: retired?.lastAbandonedAt ?? current.lastAbandonedAt,
+        unexplainedAgentChanges: retired?.unexplainedAgentChanges ?? current.unexplainedAgentChanges,
       });
       break;
     }
@@ -187,6 +256,7 @@ switch (command) {
     const action = args[0];
     if (action === "abandon" && args.length === 2 && args[1] === "developer-confirmed") {
       if (!current.checkpointRequired) fail("no comprehension checkpoint is pending");
+      const retiredAt = new Date().toISOString();
       writeState({
         ...idle,
         repositoryRoot,
@@ -195,7 +265,8 @@ switch (command) {
         engagedCommands: current.engagedCommands,
         activeCommand: "checkpoint",
         lastAbandonedTask: current.task,
-        lastAbandonedAt: new Date().toISOString(),
+        lastAbandonedAt: retiredAt,
+        unexplainedAgentChanges: current.unexplainedAgentChanges,
       });
     } else if (current.stale) {
       fail(`state is stale: ${current.staleReason}`);
