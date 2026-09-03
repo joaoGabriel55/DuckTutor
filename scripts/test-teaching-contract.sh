@@ -52,6 +52,29 @@ expect_text "post-edit checkpoint hook configured" 'PostToolUse' "$ROOT/hooks/ho
 expect_text "pending-checkpoint prompt gate configured" 'UserPromptSubmit' "$ROOT/hooks/hooks.json"
 expect_text "implement exposes explicit force-agent mode" '--force-agent' "$ROOT/commands/implement.md" "$ROOT/skills/tutor/SKILL.md"
 expect_text "checkpoint exposes explicit abandonment" '--abandon' "$ROOT/commands/checkpoint.md" "$ROOT/skills/tutor/SKILL.md"
+expect_text "shared tutor caps routine output" 'within 120 words' "$ROOT/skills/tutor/SKILL.md"
+expect_text "shared tutor caps simple verdicts" 'simple verdicts within 80' "$ROOT/skills/tutor/SKILL.md"
+expect_text "shared tutor avoids prompt restatement" 'Do not restate supplied facts' "$ROOT/skills/tutor/SKILL.md"
+expect_text "shared tutor blocks MCP file mutation absolutely" 'MCP file mutation is always blocked' "$ROOT/skills/tutor/SKILL.md"
+expect_text "shared tutor requires approval for unknown capabilities" 'unknown capabilities require approval' "$ROOT/skills/tutor/SKILL.md"
+expect_text "shared tutor reports observed evidence" 'Report expected versus observed behavior' "$ROOT/skills/tutor/SKILL.md"
+expect_text "live evaluator enforces routine output cap" 'wordCount.*<= 120' "$ROOT/scripts/eval-teaching.mjs"
+
+if node -e '
+  const fs = require("fs");
+  const root = process.argv[1];
+  const versions = [
+    JSON.parse(fs.readFileSync(`${root}/.codex-plugin/plugin.json`)).version,
+    JSON.parse(fs.readFileSync(`${root}/.claude-plugin/plugin.json`)).version,
+    JSON.parse(fs.readFileSync(`${root}/.claude-plugin/marketplace.json`)).plugins[0].version,
+  ];
+  if (!versions.every(version => version === "0.11.0")) process.exit(1);
+' "$ROOT"; then
+  printf 'PASS teaching contract: optimized plugin manifests share version 0.11.0\n'
+else
+  printf 'FAIL teaching contract: optimized plugin manifests share version 0.11.0\n'
+  FAILURES=$((FAILURES + 1))
+fi
 
 if node -e '
   const cases = require(process.argv[1]);

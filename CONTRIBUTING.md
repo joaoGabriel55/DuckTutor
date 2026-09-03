@@ -31,6 +31,9 @@ Every user-facing change must preserve these rules:
     plugin-root path; stale task maps and bare script names must never be reused.
 16. Checkpoints persist across sessions; explicit abandonment requires confirmation, records no
     understanding, and clears only the abandoned task and ownership map.
+17. Published token-efficiency claims distinguish output savings from total input-plus-output savings,
+    disclose model-call cost, and remain reproducible. Historical observations missing settings must
+    be labeled non-reproducible and excluded from product claims or later comparisons.
 
 The central behavioral contract lives in `skills/tutor/SKILL.md`. Keep commands focused on their
 entry-point-specific behavior instead of copying the entire contract into each prompt.
@@ -69,6 +72,7 @@ DuckTutor/
 │   ├── command-harness.sh
 │   ├── project-context.sh
 │   ├── eval-teaching.mjs
+│   ├── benchmark-tokens.mjs
 │   └── test-*.sh
 ├── README.md
 ├── CONTRIBUTING.md
@@ -131,6 +135,7 @@ scripts/test-learning-state.sh
 scripts/test-project-context.sh
 scripts/test-teaching-contract.sh
 scripts/test-teaching-eval.sh
+scripts/test-token-benchmark.sh
 ```
 
 Enforce the model-facing prompt budget:
@@ -146,6 +151,28 @@ standard input. This consumes model tokens and is intentionally separate from de
 DUCKTUTOR_EVAL_COMMAND='claude -p' node scripts/eval-teaching.mjs --samples 3
 DUCKTUTOR_EVAL_COMMAND='codex exec -' node scripts/eval-teaching.mjs --samples 3
 ```
+
+Run the optional token benchmark with the same model and CLI settings for both sides. Its default
+single sample makes ten isolated model calls; larger sample counts trade more tokens for lower
+variance:
+
+```bash
+DUCKTUTOR_BENCHMARK_LABEL='Claude, model and settings used' \
+  DUCKTUTOR_BENCHMARK_COMMAND='claude -p' node scripts/benchmark-tokens.mjs --samples 3
+DUCKTUTOR_BENCHMARK_LABEL='Codex, model and settings used' \
+  DUCKTUTOR_BENCHMARK_COMMAND='codex exec -' node scripts/benchmark-tokens.mjs --samples 3
+```
+
+The runner uses non-interactive `/bin/sh`; aliases and functions from an interactive shell are not
+available. Expand them to the underlying executable and environment variables, or provide a wrapper
+script on `PATH`.
+
+The benchmark uses `ceil(characters / 4)`, not a provider tokenizer or billing API. Its input delta
+covers the DuckTutor prompt (shared skill plus framing), excluding command prompts, restored context,
+task state, and hook messages. Always report input overhead, output savings, net savings, model,
+settings, and sample count together. Do not check fixture-runner output into README as a product result. Keep both modes
+response-only and isolated from the source repository, and keep each scenario self-contained and
+mapped to one of the five documented AI-code review principles.
 
 Exercise these adversarial prompts in a disposable Git repository:
 
@@ -205,4 +232,5 @@ open-ended explanation.
 - Run JSON validation, every `scripts/test-*.sh`, and the prompt budget.
 - Perform the adversarial and learning-loop smoke tests above.
 - Keep the tutor skill concise enough to load as a practical behavioral contract.
+- Keep benchmark scenarios representative and token claims reproducible and qualified.
 - Document any intentional change to the editing or web-research boundary prominently in the README.

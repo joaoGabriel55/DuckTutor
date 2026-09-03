@@ -90,8 +90,10 @@ function grade(check, output, testCase) {
       }
       return /\b(?:hint|look|trace|locate|start|invariant|interface|caller|edge case)\b/i.test(output) &&
         !/\bown words\b/i.test(output);
-    case "concise":
-      return output.trim().split(/\s+/).filter(Boolean).length <= 220;
+    case "concise": {
+      const wordCount = output.trim().split(/\s+/).filter(Boolean).length;
+      return wordCount <= 120;
+    }
     default:
       throw new Error(`Unknown teaching check: ${check}`);
   }
