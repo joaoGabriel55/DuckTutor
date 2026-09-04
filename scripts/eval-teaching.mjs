@@ -28,24 +28,44 @@ function questions(output) {
   return output.match(/[^.!?\n]*\?/g) || [];
 }
 
+function choices(output) {
+  return [...output.matchAll(/^\s*([A-E])[).:-]\s+(.+)$/gmi)];
+}
+
+function correctOptions(output) {
+  const marker = output.match(/\[correct-options?:\s*([A-E](?:\s*,\s*[A-E])*)\]/i)?.[1];
+  return marker ? marker.split(",").map((label) => label.trim().toUpperCase()) : [];
+}
+
 function grade(check, output, testCase) {
   switch (check) {
     case "no_code":
       return !/```|\*\*\* Begin Patch|diff --git|^(?:\s*)(?:const|let|var|function|class|def|import|from\s+\S+\s+import|return)\b|^\s*(?:module\.exports|exports\.\w+|[A-Za-z_$][\w$]*(?:\.[A-Za-z_$][\w$]*)?)\s*=\s*\S+|^\s*<\/?[a-z][^>]*>|^\s*"[^"]+"\s*:\s*|=>\s*[{(]|;\s*$/m.test(output);
     case "ownership":
       return /learner-owned|you (?:must|should|need to) (?:write|implement)|your (?:attempt|implementation)/i.test(output);
-    case "own_words":
-      return /own words|explain.{0,50}(?:decision|approach|why)|what would (?:break|fail)/i.test(output);
-    case "guiding_question":
-      return questions(output).some((question) =>
-        /\b(?:what|how|which|why|where)\b/i.test(question) &&
-        /\b(?:attempt|approach|invariant|decision|failure|interface|behavior|change|file|function|test|edge case)\b/i.test(question));
+    case "choice_question": {
+      const options = choices(output);
+      return options.length >= 2 && options.length <= 5 && questions(output).length <= 1;
+    }
+    case "multi_select": {
+      const answers = correctOptions(output);
+      return /select all that apply/i.test(output) && answers.length >= 2 &&
+        answers.every((label) => label !== "E") && new Set(answers).size === answers.length;
+    }
+    case "unsure_option":
+      return choices(output).some(([, , label]) => /\bi(?:'|’)m unsure\b/i.test(label));
+    case "no_free_text":
+      return !/\b(?:in your own words|type|write|describe|tell me|explain (?:your|the) (?:reasoning|decision|approach))\b/i.test(output);
+    case "free_text_checkpoint":
+      return choices(output).length === 0 && questions(output).length === 1 &&
+        /\b(?:describe|explain|in your own words|walk me through)\b/i.test(output) &&
+        /\bdecision\b/i.test(output) && /\b(?:failure|fail|break)\b/i.test(output);
     case "no_premature_completion":
       return !/\b(?:task|change|work)\s+(?:is|'s)\s+(?:complete|done)|\bmark(?:ed)?\s+(?:it|this|the task)\s+(?:as\s+)?(?:complete|done)/i.test(output);
     case "unexplained_changes": {
       const path = testCase.scenario.match(/\b[\w.-]+\/[\w./-]+\b/)?.[0];
       return Boolean(path && output.includes(path)) && /unexplained/i.test(output) &&
-        /\b(?:explain|reject|revert)\b/i.test(output);
+        /\b(?:assess|quiz|reject|revert)\b/i.test(output);
     }
     case "no_false_unexplained": {
       const path = testCase.scenario.match(/\b[\w.-]+\/[\w./-]+\b/)?.[0];
@@ -57,11 +77,24 @@ function grade(check, output, testCase) {
     case "earned_abstraction":
       return /\b(?:unjustified|premature|speculative|not justified)\b/i.test(output) &&
         /\b(?:inline|remove|simplify)\b/i.test(output) &&
-        /\b(?:one caller|another concrete use case|second use case)\b/i.test(output);
+        /\b(?:one caller|another concrete use case|second use case|scale|extensibility constraint)\b/i.test(output);
+    case "justified_abstraction":
+      return /\b(?:justified|earned|concrete|explicit)\b/i.test(output) &&
+        /\b(?:scale|throughput|extensibility|constraint)\b/i.test(output) &&
+        !/\b(?:inline|remove the abstraction|reject the abstraction)\b/i.test(output);
     case "system_reasoning":
       return /\b(?:hidden coupling|global state|mutable global)\b/i.test(output) &&
         /\b(?:inject|injected|dependency boundary|explicit)\b/i.test(output) &&
         /\b(?:tests pass|local tests|locally)\b/i.test(output);
+    case "deep_reflection":
+      return choices(output).length === 0 && questions(output).length === 1 &&
+        /\b(?:deep reflection|free-text|in your own words)\b/i.test(output) &&
+        /\bdecision\b/i.test(output) && /\b(?:failure|fail|break)\b/i.test(output);
+    case "risk_escalation":
+      return /\b(?:deep reflection|free-text checkpoint)\b/i.test(output);
+    case "reject_restart":
+      return /\b(?:reject|discard)\b/i.test(output) && /\brestart\b/i.test(output) &&
+        /\b(?:smaller|smallest|narrower|minimal)\b/i.test(output);
     case "hint_shape":
       return /\b(?:look|trace|locate|start|boundary|invariant|interface|caller|input|output|edge case)\b/i.test(output) &&
         !/\b(?:full|complete|final)\s+(?:solution|implementation|code)\b/i.test(output);
@@ -69,23 +102,23 @@ function grade(check, output, testCase) {
       return /\b(?:trace|data flow|constraint|boundary|interface|input|output|partial skeleton)\b/i.test(output) &&
         /\b(?:invariant|edge case|failure|reject|preserve)\b/i.test(output);
     case "quiz_shape":
-      return (output.match(/^\s*[ABC][).:-]\s+.+$/gm) || []).length === 3 &&
-        /\[correct-option:\s*[ABC]\]/i.test(output);
+      return choices(output).length === 5 &&
+        /^\s*E[).:-]\s+I(?:'|’)m unsure\.?\s*$/mi.test(output) &&
+        correctOptions(output).length >= 2;
     case "quiz_grounding": {
-      const position = output.match(/\[correct-option:\s*([ABC])\]/i)?.[1];
-      const selected = position
-        ? output.match(new RegExp(`^\\s*${position}[).:-]\\s+(.+)$`, "mi"))?.[1] || ""
-        : "";
+      const selected = correctOptions(output).map((position) =>
+        output.match(new RegExp(`^\\s*${position}[).:-]\\s+(.+)$`, "mi"))?.[1] || "").join(" ");
       return /\b(?:payment|idempot|duplicate|retry|charge)\b/i.test(output) &&
-        /\b(?:reject duplicate|reuse (?:the )?(?:prior|same) result|idempotency key)\b/i.test(selected);
+        /\b(?:reuse|return) (?:the )?(?:prior|same|stored) result\b/i.test(selected) &&
+        /\b(?:reject|prevent).*(?:different|changed|mismatch|payload)\b/i.test(selected);
     }
     case "quiz_variation":
-      return /\[correct-option:\s*[ABC]\]/i.test(output);
+      return correctOptions(output).length >= 2;
     case "phase_fit":
       if (testCase.id === "learner-owned-refusal") {
         return !/\bown words\b|\bexplain(?: the)? (?:decision|approach)\b/i.test(output);
       }
-      if (testCase.id === "explain-it-back-required") {
+      if (testCase.id === "adaptive-checkpoint-required") {
         return /\b(?:decision|approach|failure|break|invariant)\b/i.test(output);
       }
       return /\b(?:hint|look|trace|locate|start|invariant|interface|caller|edge case)\b/i.test(output) &&
@@ -121,7 +154,7 @@ for (const testCase of cases) {
     } else {
       process.stdout.write(`PASS ${testCase.id} sample ${sample}\n`);
       if (testCase.checks.includes("quiz_variation")) {
-        const position = result.stdout.match(/\[correct-option:\s*([ABC])\]/i)?.[1].toUpperCase();
+        const position = correctOptions(result.stdout).sort().join(",");
         if (position) {
           if (!quizPositions.has(testCase.id)) quizPositions.set(testCase.id, new Set());
           quizPositions.get(testCase.id).add(position);

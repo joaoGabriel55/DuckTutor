@@ -25,7 +25,7 @@ fi
 COMMAND="$(PROMPT_VALUE="$PROMPT" node -e '
   const prompt = process.env.PROMPT_VALUE || "";
   const freshStart = /^\s*\/(?:ducktutor:)?start(?:\s|$)/i.test(prompt);
-  const slash = prompt.match(/(?:^|\s)\/(?:ducktutor:)?(teach-me|start|explain|review|hint|checkpoint|implement)\b/i);
+  const slash = prompt.match(/(?:^|\s)\/(?:ducktutor:)?(teach-me|start|explain|review|hint|checkpoint|implement|config|clean)\b/i);
   if (freshStart) process.stdout.write("start-new-task");
   else if (slash) process.stdout.write(slash[1].toLowerCase());
   else {
@@ -37,13 +37,14 @@ COMMAND="$(PROMPT_VALUE="$PROMPT" node -e '
   }
 ')"
 
-[[ -n "$COMMAND" && "$COMMAND" != "checkpoint" && "$COMMAND" != "start-new-task" ]] || exit 0
+[[ -n "$COMMAND" && "$COMMAND" != "checkpoint" && "$COMMAND" != "config" && "$COMMAND" != "clean" && "$COMMAND" != "start-new-task" ]] || exit 0
 
 STATE_JSON="$STATE_JSON" node -e '
   const state = JSON.parse(process.env.STATE_JSON);
   const task = state.task ? ` for task ${JSON.stringify(state.task)}` : "";
+  const mode = state.deepReflectionRequired ? "deep-reflection" : (state.responseMode === "free-text" ? "free-text" : "quiz");
   process.stdout.write(JSON.stringify({
     decision: "block",
-    reason: `DuckTutor has a pending comprehension checkpoint${task}. It persists across sessions. Run /ducktutor:checkpoint to answer, /ducktutor:checkpoint --abandon to explicitly discard the task, or /ducktutor:start <new task> to begin fresh without claiming understanding of the old task.`,
+    reason: `DuckTutor has a pending ${mode} checkpoint${task}. It persists across sessions. Run /ducktutor:checkpoint to continue, /ducktutor:config to change the default response mode, /ducktutor:clean to reset all DuckTutor state, or /ducktutor:start <new task> to begin fresh.`,
   }) + "\n");
 '

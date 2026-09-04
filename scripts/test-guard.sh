@@ -122,9 +122,15 @@ expect_allowed "plugin-variable new-task entry" '"${CLAUDE_PLUGIN_ROOT}/scripts/
 expect_denied "explain cannot create task state" "$HARNESS enter explain --new-task"
 expect_allowed "command harness forced implementation entry" "$HARNESS enter implement --force-agent"
 expect_denied "unknown command harness implementation flag" "$HARNESS enter implement --force"
+expect_denied "unknown command harness checkpoint flag" "$HARNESS enter checkpoint --verbose"
 expect_allowed "command harness checkpoint requirement" "$HARNESS checkpoint-require"
-expect_command_asked "confirmed checkpoint completion" "$HARNESS checkpoint-pass developer-confirmed"
-expect_command_asked "confirmed checkpoint abandonment" "$HARNESS checkpoint-abandon developer-confirmed"
+expect_allowed "command harness deep-reflection requirement" "$HARNESS checkpoint-require deep-reflection"
+expect_allowed "command harness records correct quiz choice" "$HARNESS checkpoint-record correct"
+expect_allowed "command harness records unsure quiz choice" "$HARNESS checkpoint-record unsure"
+expect_denied "command harness rejects unknown quiz result" "$HARNESS checkpoint-record guessed"
+expect_command_asked "confirmed checkpoint completion" "$HARNESS checkpoint-pass quiz-confirmed"
+expect_command_asked "confirmed free-text checkpoint completion" "$HARNESS checkpoint-pass free-text-confirmed"
+expect_command_asked "confirmed checkpoint abandonment" "$HARNESS checkpoint-abandon choice-confirmed"
 expect_denied "unconfirmed checkpoint abandonment" "$HARNESS checkpoint-abandon"
 expect_denied "unsupported command harness action" "$HARNESS bypass"
 
@@ -139,8 +145,8 @@ fi
 expect_command_asked "learning task begin" "$STATE begin guard-test"
 expect_command_asked "ownership map change" "$STATE scope learner:src/app.js agent:test/app.test.js"
 expect_allowed "learning phase advance" "$STATE phase attempted"
-expect_denied "unconfirmed explanation phase" "$STATE phase explained"
-expect_command_asked "confirmed explanation phase" "$STATE phase explained developer-confirmed"
+expect_denied "unconfirmed assessment phase" "$STATE phase assessed"
+expect_command_asked "confirmed assessment phase" "$STATE phase assessed assessment-confirmed"
 expect_command_asked "learning state clear" "$STATE clear"
 
 unscoped_payload='{"tool_name":"Edit","tool_input":{"file_path":"src/app.js","old_string":"a","new_string":"b"}}'

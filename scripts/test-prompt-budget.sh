@@ -5,7 +5,7 @@ set -uo pipefail
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 SKILL="$ROOT/skills/tutor/SKILL.md"
 SKILL_LIMIT=450
-COMMANDS_LIMIT=700
+COMMANDS_LIMIT=775
 RUNTIME_LIMIT=900
 FAILURES=0
 
