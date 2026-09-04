@@ -154,6 +154,7 @@ scripts/test-project-context.sh
 scripts/test-teaching-contract.sh
 scripts/test-teaching-eval.sh
 scripts/test-token-benchmark.sh
+scripts/test-bump-version.sh
 ```
 
 Enforce the model-facing prompt budget:
@@ -257,3 +258,10 @@ actual change, quiz mode varies correct positions, and risk escalation cannot be
 - Keep the tutor skill concise enough to load as a practical behavioral contract.
 - Keep benchmark scenarios representative and token claims reproducible and qualified.
 - Document any intentional change to the editing or web-research boundary prominently in the README.
+
+## Release version
+
+Use `scripts/bump-version.sh <major.minor.patch>` to update all Claude and Codex release manifests
+together. The command rejects invalid versions, downgrades, unchanged versions, and pre-existing
+manifest drift. Follow [RELEASING.md](RELEASING.md) to validate, commit, tag, push, and create the
+GitHub release.

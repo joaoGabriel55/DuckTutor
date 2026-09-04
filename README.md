@@ -372,6 +372,8 @@ marketplace is intentionally separate from editing this source repository.
 ## Contributing
 
 See [CONTRIBUTING.md](./CONTRIBUTING.md).
+Release maintainers should follow [RELEASING.md](./RELEASING.md) for synchronized version bumps and
+the GitHub release sequence.
 
 ## License
 

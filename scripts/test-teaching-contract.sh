@@ -93,11 +93,11 @@ if node -e '
     JSON.parse(fs.readFileSync(`${root}/.claude-plugin/plugin.json`)).version,
     JSON.parse(fs.readFileSync(`${root}/.claude-plugin/marketplace.json`)).plugins[0].version,
   ];
-  if (!versions.every(version => version === "0.12.0")) process.exit(1);
+  if (!versions.every(version => version === versions[0]) || !/^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)$/.test(versions[0])) process.exit(1);
 ' "$ROOT"; then
-  printf 'PASS teaching contract: adaptive-quiz plugin manifests share version 0.12.0\n'
+  printf 'PASS teaching contract: plugin manifests share a stable release version\n'
 else
-  printf 'FAIL teaching contract: adaptive-quiz plugin manifests share version 0.12.0\n'
+  printf 'FAIL teaching contract: plugin manifests share a stable release version\n'
   FAILURES=$((FAILURES + 1))
 fi
 
