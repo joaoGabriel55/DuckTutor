@@ -70,7 +70,7 @@ if STATE_JSON="$state_after_begin" node -e '
   const state = JSON.parse(process.env.STATE_JSON);
   if (!state.engagedCommands.includes("start") || !state.engagedCommands.includes("implement")) process.exit(1);
   if (state.activeCommand !== "implement") process.exit(1);
-  if (state.implementationMode !== "force-agent" || state.learnerPaths.length !== 0) process.exit(1);
+  if (state.implementationMode !== "force-agent" || !state.deepReflectionRequired || state.learnerPaths.length !== 0) process.exit(1);
 '; then printf 'PASS harness: task begin preserves command engagement\n'; else
   printf 'FAIL harness: task begin preserves command engagement\n'
   FAILURES=$((FAILURES + 1))
@@ -92,14 +92,14 @@ if STATE_JSON="$checkpoint_state" POST_JSON="$post_output" node -e '
   const state = JSON.parse(process.env.STATE_JSON);
   const hook = JSON.parse(process.env.POST_JSON);
   if (!state.checkpointRequired) process.exit(1);
-  if (!hook.hookSpecificOutput.additionalContext.includes("comprehension checkpoint")) process.exit(1);
-'; then printf 'PASS harness: successful edit requires a checkpoint\n'; else
-  printf 'FAIL harness: successful edit requires a checkpoint\n'
+  if (!hook.hookSpecificOutput.additionalContext.includes("deep-reflection checkpoint")) process.exit(1);
+'; then printf 'PASS harness: successful force-agent edit requires deep reflection\n'; else
+  printf 'FAIL harness: successful force-agent edit requires deep reflection\n'
   FAILURES=$((FAILURES + 1))
 fi
 
 blocked_prompt="$(printf '{"cwd":"%s","prompt":"/ducktutor:review"}' "$PROJECT" | DUCKTUTOR_PROJECT_DIR="$PROJECT" "$PROMPT_GATE" 2>/dev/null || true)"
-if [[ "$blocked_prompt" == *'"decision":"block"'* && "$blocked_prompt" == *'persists across sessions'* && "$blocked_prompt" == *'/ducktutor:checkpoint --abandon'* ]]; then
+if [[ "$blocked_prompt" == *'"decision":"block"'* && "$blocked_prompt" == *'deep-reflection checkpoint'* && "$blocked_prompt" == *'persists across sessions'* && "$blocked_prompt" == *'/ducktutor:clean'* ]]; then
   printf 'PASS harness: unanswered checkpoint blocks with cross-session recovery choices\n'
 else
   printf 'FAIL harness: unanswered checkpoint blocks with cross-session recovery choices\n'
@@ -109,6 +109,18 @@ fi
 checkpoint_prompt="$(printf '{"cwd":"%s","prompt":"/ducktutor:checkpoint"}' "$PROJECT" | DUCKTUTOR_PROJECT_DIR="$PROJECT" "$PROMPT_GATE" 2>/dev/null || true)"
 if [[ -z "$checkpoint_prompt" ]]; then printf 'PASS harness: checkpoint command remains available\n'; else
   printf 'FAIL harness: checkpoint command remains available\n'
+  FAILURES=$((FAILURES + 1))
+fi
+
+config_prompt="$(printf '{"cwd":"%s","prompt":"/ducktutor:config"}' "$PROJECT" | DUCKTUTOR_PROJECT_DIR="$PROJECT" "$PROMPT_GATE" 2>/dev/null || true)"
+if [[ -z "$config_prompt" ]]; then printf 'PASS harness: config remains available during checkpoints\n'; else
+  printf 'FAIL harness: config remains available during checkpoints\n'
+  FAILURES=$((FAILURES + 1))
+fi
+
+clean_prompt="$(printf '{"cwd":"%s","prompt":"/ducktutor:clean"}' "$PROJECT" | DUCKTUTOR_PROJECT_DIR="$PROJECT" "$PROMPT_GATE" 2>/dev/null || true)"
+if [[ -z "$clean_prompt" ]]; then printf 'PASS harness: clean remains available during checkpoints\n'; else
+  printf 'FAIL harness: clean remains available during checkpoints\n'
   FAILURES=$((FAILURES + 1))
 fi
 
@@ -127,7 +139,7 @@ if [[ -z "$fresh_start_prompt" && -z "$uppercase_start_prompt" && "$suffixed_sta
 fi
 
 session_output="$(printf '{"source":"startup","cwd":"%s","hook_event_name":"SessionStart"}' "$PROJECT" | DUCKTUTOR_PROJECT_DIR="$PROJECT" "$SESSION_HOOK" 2>/dev/null || true)"
-if [[ "$session_output" == *'persists across sessions'* && "$session_output" == *'/ducktutor:checkpoint --abandon'* ]]; then
+if [[ "$session_output" == *'Effective checkpoint mode: deep-reflection'* && "$session_output" == *'persists across sessions'* && "$session_output" == *'/ducktutor:clean'* ]]; then
   printf 'PASS harness: new session explains pending-checkpoint recovery\n'
 else
   printf 'FAIL harness: new session explains pending-checkpoint recovery\n'
@@ -159,7 +171,7 @@ retired_checkpoint_state="$(run_harness show)"
 if STATE_JSON="$retired_checkpoint_state" node -e '
   const state = JSON.parse(process.env.STATE_JSON);
   if (state.phase !== "idle" || state.task !== "" || state.checkpointRequired) process.exit(1);
-  if (state.learnerPaths.length || state.agentPaths.length || state.explanationConfirmedAt) process.exit(1);
+  if (state.learnerPaths.length || state.agentPaths.length || state.assessmentConfirmedAt) process.exit(1);
   if (state.lastAbandonedTask !== "harness task" || !state.lastAbandonedAt) process.exit(1);
   if (state.unexplainedAgentChanges.length !== 1) process.exit(1);
   const retired = state.unexplainedAgentChanges[0];
@@ -188,11 +200,14 @@ expect_success "require a new checkpoint after fresh start" run_harness checkpoi
 expect_success "entry gate allows checkpoint" run_harness enter checkpoint
 expect_failure "checkpoint cannot clear without confirmation" run_harness checkpoint-pass
 expect_failure "pending checkpoint cannot be erased" env DUCKTUTOR_PROJECT_DIR="$PROJECT" "$STATE" clear
-expect_success "confirmed understanding clears checkpoint" run_harness checkpoint-pass developer-confirmed
+expect_success "record first correct checkpoint choice" run_harness checkpoint-record correct
+expect_failure "checkpoint cannot pass after one correct choice" run_harness checkpoint-pass quiz-confirmed
+expect_success "record second correct checkpoint choice" run_harness checkpoint-record correct
+expect_success "confirmed quiz result clears checkpoint" run_harness checkpoint-pass quiz-confirmed
 expect_success "commands resume after checkpoint" run_harness enter review
 expect_success "record completed attempt" env DUCKTUTOR_PROJECT_DIR="$PROJECT" "$STATE" phase attempted
 expect_success "record completed verification" env DUCKTUTOR_PROJECT_DIR="$PROJECT" "$STATE" phase verified
-expect_success "record completed explanation" env DUCKTUTOR_PROJECT_DIR="$PROJECT" "$STATE" phase explained developer-confirmed
+expect_success "record completed assessment" env DUCKTUTOR_PROJECT_DIR="$PROJECT" "$STATE" phase assessed assessment-confirmed
 expect_failure "new-task flag is start-only" run_harness enter review --new-task
 expect_success "new start retires completed task" run_harness enter start --new-task
 
@@ -219,13 +234,13 @@ expect_success "enter implementation before abandoned checkpoint" run_harness en
 expect_success "require checkpoint before abandonment" run_harness checkpoint-require
 expect_success "enter checkpoint abandonment flow" run_harness enter checkpoint
 expect_failure "checkpoint abandonment requires confirmation" run_harness checkpoint-abandon
-expect_success "confirmed abandonment unlocks task state" run_harness checkpoint-abandon developer-confirmed
+expect_success "confirmed abandonment unlocks task state" run_harness checkpoint-abandon choice-confirmed
 
 abandoned_state="$(run_harness show)"
 if STATE_JSON="$abandoned_state" node -e '
   const state = JSON.parse(process.env.STATE_JSON);
   if (state.phase !== "idle" || state.task !== "" || state.checkpointRequired) process.exit(1);
-  if (state.learnerPaths.length || state.agentPaths.length || state.explanationConfirmedAt) process.exit(1);
+  if (state.learnerPaths.length || state.agentPaths.length || state.assessmentConfirmedAt) process.exit(1);
   if (state.lastAbandonedTask !== "task to abandon" || !state.lastAbandonedAt) process.exit(1);
   if (!state.engagedCommands.includes("implement") || state.activeCommand !== "checkpoint") process.exit(1);
 '; then

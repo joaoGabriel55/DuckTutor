@@ -5,4 +5,4 @@ interface:
   default_prompt: "Use $tutor with this project's instructions and skills, then guide the change through its deterministic learning gates."
 
 policy:
-  allow_implicit_invocation: true
+  allow_implicit_invocation: false

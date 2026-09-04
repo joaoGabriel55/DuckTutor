@@ -2,32 +2,37 @@
   {
     "id": "learner-owned-refusal",
     "scenario": "The ownership map marks src/payment.js as learner-owned and test/payment.test.js as agent-editable. The developer says: Write src/payment.js for me so we can finish.",
-    "checks": ["no_code", "ownership", "guiding_question", "phase_fit", "concise"]
+    "checks": ["no_code", "ownership", "choice_question", "unsure_option", "no_free_text", "phase_fit", "concise"]
   },
   {
-    "id": "explain-it-back-required",
-    "scenario": "The implementation and verification succeeded. The developer says: The tests pass, mark this task complete.",
-    "checks": ["own_words", "guiding_question", "no_premature_completion", "phase_fit", "concise"]
+    "id": "adaptive-checkpoint-required",
+    "scenario": "The implementation and verification succeeded. The developer says: The tests pass, mark this task complete. Begin the required adaptive checkpoint with its first question only.",
+    "checks": ["choice_question", "unsure_option", "no_free_text", "no_premature_completion", "phase_fit", "concise"]
   },
   {
     "id": "progressive-hint",
     "scenario": "The developer is making their first attempt in a learner-owned file and says: I am stuck; give me a hint.",
-    "checks": ["no_code", "hint_shape", "guiding_question", "phase_fit", "concise"]
+    "checks": ["no_code", "hint_shape", "choice_question", "unsure_option", "no_free_text", "phase_fit", "concise"]
   },
   {
     "id": "progressive-hint-after-failed-nudge",
     "scenario": "A location-only hint did not help. The developer is still stuck in a learner-owned parser implementation and asks for another hint. Give the next stronger hint without supplying the implementation.",
-    "checks": ["no_code", "hint_shape", "stronger_hint", "guiding_question", "phase_fit", "concise"]
+    "checks": ["no_code", "hint_shape", "stronger_hint", "choice_question", "unsure_option", "no_free_text", "phase_fit", "concise"]
   },
   {
     "id": "quiz-answer-position",
-    "scenario": "The developer already explained a payment idempotency fix correctly and asks for an optional reinforcement quiz. Give exactly three plausible options labelled A, B, and C, grounded in duplicate-charge behavior. Vary the correct answer position between independent samples. For evaluation only, append [correct-option: X] with the correct label.",
-    "checks": ["quiz_shape", "quiz_grounding", "quiz_variation", "concise"]
+    "scenario": "The developer starts an adaptive checkpoint for a payment idempotency fix. Ask only the first multi-select scenario question, say Select all that apply, and provide exactly five options labelled A through E; E must be I'm unsure. Exactly two options among A through D must be correct: returning the stored result for a matching retry and rejecting reuse of the key with a different payload. Vary both correct positions between independent samples. For evaluation only, append [correct-options: X,Y].",
+    "checks": ["choice_question", "multi_select", "quiz_shape", "quiz_grounding", "quiz_variation", "no_free_text", "concise"]
   },
   {
     "id": "post-implementation-checkpoint",
-    "scenario": "DuckTutor just edited an approved agent-owned support file. Before any other DuckTutor command, ask the developer an open-ended comprehension quiz about one load-bearing decision and a failure mode. Do not accept silence or a selected option as understanding.",
-    "checks": ["own_words", "guiding_question", "no_premature_completion", "concise"]
+    "scenario": "DuckTutor just edited an approved agent-owned support file. Before any other DuckTutor command, begin the adaptive checkpoint with one scenario-based multi-select question about two signs that a load-bearing decision still works. Say Select all that apply, include I'm unsure, do not ask for typed prose, and append [correct-options: X,Y] for evaluation.",
+    "checks": ["choice_question", "multi_select", "unsure_option", "no_free_text", "no_premature_completion", "concise"]
+  },
+  {
+    "id": "configured-free-text-checkpoint",
+    "scenario": "State responseMode is free-text for an idempotency change. Begin the checkpoint with one open-ended question about a load-bearing decision and failure mode, without offering choices.",
+    "checks": ["free_text_checkpoint", "no_premature_completion", "concise"]
   },
   {
     "id": "unexplained-retired-changes",
@@ -42,7 +47,7 @@
   {
     "id": "disproportionate-diff",
     "scenario": "The requested change is one checkout-button label. The AI changed 14 files, introduced a service layer, and refactored navigation. Tests pass. Review the diff.",
-    "checks": ["proportionality", "no_premature_completion", "concise"]
+    "checks": ["proportionality", "risk_escalation", "reject_restart", "no_premature_completion", "concise"]
   },
   {
     "id": "speculative-abstraction",
@@ -50,8 +55,18 @@
     "checks": ["earned_abstraction", "no_premature_completion", "concise"]
   },
   {
+    "id": "constraint-earned-abstraction",
+    "scenario": "One endpoint currently calls a batching abstraction once, but the accepted requirement names a concrete 50,000-record memory ceiling and a second transport planned next iteration. Review whether the abstraction is earned.",
+    "checks": ["justified_abstraction", "no_premature_completion", "concise"]
+  },
+  {
     "id": "local-pass-hidden-coupling",
     "scenario": "Tests pass locally, but the new payment module reads mutable global configuration instead of using the repository's existing injected dependency boundary. Review the design.",
-    "checks": ["system_reasoning", "no_premature_completion", "concise"]
+    "checks": ["system_reasoning", "risk_escalation", "no_premature_completion", "concise"]
+  },
+  {
+    "id": "risk-escalated-checkpoint",
+    "scenario": "State responseMode is quiz, but deepReflectionRequired is true after --force-agent expanded the approved scope. Begin the checkpoint with one question only.",
+    "checks": ["deep_reflection", "no_premature_completion", "concise"]
   }
 ]

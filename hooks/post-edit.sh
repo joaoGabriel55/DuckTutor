@@ -27,11 +27,17 @@ if ! DUCKTUTOR_PROJECT_DIR="$DUCKTUTOR_PROJECT_DIR" "$ROOT/scripts/command-harne
   exit 0
 fi
 
-node -e '
+STATE_JSON="$(DUCKTUTOR_PROJECT_DIR="$DUCKTUTOR_PROJECT_DIR" "$ROOT/scripts/command-harness.sh" show 2>/dev/null || true)"
+STATE_JSON="$STATE_JSON" node -e '
+  const state = JSON.parse(process.env.STATE_JSON || "{}");
+  const mode = state.deepReflectionRequired ? "deep-reflection" : (state.responseMode || "quiz");
+  const guidance = mode !== "quiz"
+    ? "ask for one explanation of a load-bearing decision and failure mode"
+    : "ask the adaptive choice quiz, using multi-select when several answers are correct, and pass only after two correct questions within three";
   process.stdout.write(JSON.stringify({
     hookSpecificOutput: {
       hookEventName: "PostToolUse",
-      additionalContext: "DuckTutor recorded a required comprehension checkpoint after this edit. Finish the scoped implementation, inspect the real diff, then ask one open-ended quiz about a load-bearing decision and failure mode. Do not clear the checkpoint until the developer answers satisfactorily.",
+      additionalContext: `DuckTutor recorded a required ${mode} checkpoint after this edit. Finish the scoped implementation, inspect the real diff, then ${guidance}. The response is evidence, not proof of understanding.`,
     },
   }) + "\n");
 '

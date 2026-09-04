@@ -19,6 +19,9 @@ technical judgment.
 - DuckTutor may research links and external facts supplied by the user or required by the task.
 - DuckTutor recommends the smallest adequate change and mentions alternatives only when they matter.
 - DuckTutor is concise by default and expands when complexity, risk, or your request requires it.
+- DuckTutor defaults to choice-based quiz responses; questions may be single- or multi-select, and
+  knowledge questions include an exclusive `I'm unsure` option.
+  `/ducktutor:config --mode=free-text` persistently switches the repository to free-text responses.
 - DuckTutor explains learner-owned code without dictating a transcription-ready solution.
 - `/start` grounds a new feature or bug fix, asks for one meaningful human judgment, and then hands
   off directly to `/implement` without making you repeat the task.
@@ -26,6 +29,8 @@ technical judgment.
 - Any prior non-implementation DuckTutor command unlocks an explicit `/implement` request; missing
   task, prediction, and ownership gates are completed inside that flow.
 - `/implement --force-agent` allows an approved all-agent map only after that prior tutoring command.
+- Force-agent work and later ownership-scope growth escalate the checkpoint to deep reflection even
+  when quiz mode is configured.
 - Each task has an approved learner-owned/agent-editable file map persisted in Git metadata.
 - DuckTutor may edit only agent-editable files through manually approved native edit operations.
 - Learner-owned and unscoped files are mechanically blocked.
@@ -33,8 +38,13 @@ technical judgment.
 - DuckTutor may use host-configured MCP tools for scoped end-to-end observation and testing.
 - MCP calls remain subject to the host's server and per-tool permission policy and never bypass the
   source-editing boundary.
-- After DuckTutor edits, an open-ended comprehension quiz is mandatory. Until it is answered
-  satisfactorily, other DuckTutor commands remain locked except for an explicit fresh `/start`.
+- After DuckTutor edits, a checkpoint in the configured mode is mandatory. Quiz mode requires two
+  correct answers within three scenarios; free-text mode requires a satisfactory explanation of a
+  load-bearing decision and failure mode. Until completion, other commands remain locked except
+  `/config`, `/clean`, `/checkpoint`, and a fresh `/start`.
+- A disproportionate diff or hidden/system coupling also escalates the checkpoint to deep reflection.
+  If narrowing cannot restore confidence, DuckTutor recommends rejecting the diff and restarting
+  from a smaller plan.
 - A pending task may be explicitly abandoned through `/checkpoint --abandon`; this records no
   understanding and requires confirmation. Starting a fresh task also retires the old task without
   recording understanding; its agent-edited paths remain marked for later review while still present
@@ -52,11 +62,12 @@ technical judgment.
 ## Why
 
 Code that runs can still be a poor engineering decision. DuckTutor asks you to reconsider a change
-when you cannot explain it, the diff is larger than the problem, it adds abstractions without
-evidence, or it makes the system harder to reason about.
+when you cannot explain it, the diff is larger than the problem, it adds abstractions without a
+second use or a concrete scalability/extensibility constraint, or it makes the system harder to
+reason about.
 
 Copying code does not create understanding, so DuckTutor combines learner-written implementation
-with prediction, review of the applied change, observable verification, and explain-it-back.
+with prediction, review of the applied change, observable verification, and adaptive assessment.
 
 The approach is inspired by:
 
@@ -175,7 +186,7 @@ it helps.
 
 Start a concrete feature or bug fix. DuckTutor inspects enough context to state the intended
 behavior, smallest adequate approach, riskiest edge case, and verification signal, then asks one
-open-ended prediction or trade-off question. After your answer, run `/ducktutor:implement` for guided
+choice-based prediction or trade-off question. After your selection, run `/ducktutor:implement` for guided
 hybrid work or `/ducktutor:implement --force-agent` for an approved all-agent scope. You do not need
 to repeat the task description.
 
@@ -196,7 +207,8 @@ Understand how something works without starting a task, assigning files, or chan
 ### `/ducktutor:review [optional file or path]`
 
 Review the current working diff or a selected target for correctness, scope, abstractions,
-reasonability, tests, and project fit. Clean reviews use one change-grounded comprehension check.
+reasonability, tests, and project fit. Reviews recommend reject-and-restart when narrowing cannot
+restore confidence. Clean reviews use one change-grounded comprehension check.
 
 ```text
 /ducktutor:review
@@ -210,24 +222,57 @@ skeleton, without dictating learner-owned code.
 
 ### `/ducktutor:checkpoint [--abandon | optional file, path, or concept]`
 
-Explain a load-bearing decision in your own words using the actual diff and observed behavior.
-Checkpoints persist across sessions. If the task is no longer relevant, `--abandon` shows which task
-will be discarded, requires confirmation, records the abandonment, and clears its ownership map.
+Complete the checkpoint using configured `responseMode`. Quiz mode asks scenarios one at a time and
+uses single-select when one answer is correct or “Select all that apply” when several are correct.
+Multi-select answers must match the exact correct set; omissions and extra choices are incorrect.
+`I'm unsure` is exclusive. Each selection set counts as one question; checkpoints require two correct
+questions within three. Free-text asks for a
+load-bearing decision and failure mode in your own words. Checkpoints persist across sessions. If the
+task is obsolete, `--abandon` confirms and records its retirement without claiming understanding.
+Force-agent work, expanded ownership scope, disproportionate diffs, and hidden/system coupling
+override quiz mode with a one-question deep-reflection checkpoint.
+
+### `/ducktutor:config --mode=quiz|free-text`
+
+This zero-model command is handled by a `UserPromptExpansion` hook before its prompt reaches Claude:
+
+```text
+/ducktutor:config --mode=quiz
+/ducktutor:config --mode=free-text
+/ducktutor:config --help
+```
+
+Quiz is the default and supports single- and multi-select questions; free-text uses concise open-ended questions, including checkpoints. Changing
+mode resets partial quiz answers without clearing a pending checkpoint. `--help` describes both modes.
+
+### `/ducktutor:clean [--help]`
+
+Reset DuckTutor manually when its persisted state is no longer useful:
+
+```text
+/ducktutor:clean
+/ducktutor:clean --help
+```
+
+Like config, this command runs through a `UserPromptExpansion` hook without invoking Claude. It
+removes all DuckTutor state stored in Git metadata, including active tasks, checkpoints, retired-change
+history, and response-mode configuration. Project files and Git history are untouched; the next
+session starts in quiz mode.
 
 ### `/ducktutor:implement [--force-agent] [problem or feature and optional file scope]`
 
 After `/start`, begin implementation without repeating the task. DuckTutor establishes any missing
 learning gates, guides learner-owned work, and may edit only approved agent-editable files. You can
 also supply a task directly after using another DuckTutor command. Every edit needs approval and
-ends with a required open-ended comprehension quiz.
+ends with the required configured checkpoint.
 
 With `--force-agent`, DuckTutor may implement every file in a newly approved all-agent map. The flag
-is rejected until another DuckTutor command has run and never authorizes unscoped or destructive edits.
+is rejected until another DuckTutor command has run, never authorizes unscoped or destructive edits,
+and requires a deep-reflection checkpoint.
 
 ## Codex skill
 
-Codex can load the tutor automatically when a request matches its purpose, or you can invoke it
-explicitly:
+DuckTutor does not activate implicitly. Invoke its Codex skill explicitly:
 
 ```text
 $ducktutor:tutor Teach me how this repository works.
@@ -237,12 +282,12 @@ $ducktutor:tutor Implement this feature with manual approval for every scoped ed
 $ducktutor:tutor Review my current diff and check whether I understand it.
 ```
 
-The same state and ownership hooks protect Codex tool calls. Codex asks you to review and trust plugin
-hooks before enabling them; protection and automatic session restore are inactive until trusted.
+State and ownership enforcement is scoped to that invocation. Outside the tutor skill, DuckTutor does
+not restrict Codex tools or prompts.
 
 ## Project-native context
 
-At session start, DuckTutor inventories paths—not contents—for applicable `AGENTS.md`, `AGENTS.override.md`, `CLAUDE.md`,
+When a DuckTutor command starts, it inventories paths—not contents—for applicable `AGENTS.md`, `AGENTS.override.md`, `CLAUDE.md`,
 and `CONTEXT.md` files, project skills under `.agents/`, `.codex/`, or `.claude/`, hook and MCP
 configuration, CI workflows, and common build manifests. It reads only what the current task needs,
 uses matching skills through the host, and respects project hooks and instructions without copying
@@ -253,9 +298,9 @@ permissions, file ownership, or user authorization.
 
 DuckTutor stores one active task per Git repository under `.git/ducktutor/state.json`, so it does not
 dirty the working tree. The state records the task, ownership map, and current phase:
-`grounded → predicted → attempted → verified → explained`. It also records command engagement and
-whether a comprehension checkpoint is pending. A session-start hook restores a compact summary after
-startup, resume, clear, or context compaction. State records progress; it does not prove
+`grounded → predicted → attempted → verified → assessed`. It also records command engagement and
+whether a comprehension checkpoint is pending. The next explicit DuckTutor command reloads this state
+after startup, resume, clear, or context compaction. State records progress; it does not prove
 understanding or replace inspection of the current diff. The map cannot be used while another branch
 is checked out or when rewritten history no longer descends from its approved baseline. DuckTutor
 then requires fresh inspection and ownership-map approval before editing.
@@ -272,7 +317,7 @@ During a scoped feature, fix, or review, DuckTutor may use an available MCP tool
 or test application, exercise the relevant flow, inspect page state, console output, or network
 activity, and capture snapshots or screenshots. It reports the target, actions, expectation, and
 observed result. MCP file-mutation tools are denied. MCP tools never replace the ownership map,
-native edit approval, actual diff review, or explain-it-back gate.
+native edit approval, actual diff review, or configured checkpoint gate.
 
 ## Installation
 
@@ -291,8 +336,9 @@ For local development:
 claude --plugin-dir ./DuckTutor
 ```
 
-Use `/reload-plugins` after editing plugin files. Use `/hooks` to confirm DuckTutor's session,
-pre-tool, post-edit, and prompt-gate hooks are loaded.
+Use `/reload-plugins` after editing plugin files. Outside DuckTutor commands, `/hooks` should show only
+the deterministic config/clean expansion hooks. Scoped pre-tool and post-edit hooks are active only
+while an interactive DuckTutor command runs.
 
 ### Codex
 
@@ -317,10 +363,10 @@ marketplace is intentionally separate from editing this source repository.
 4. Let DuckTutor perform scoped MCP-assisted end-to-end observation when a suitable tool is
    available, and run any remaining shell test command yourself.
 5. Run `/ducktutor:review` on the actual changes.
-6. Answer the required open-ended quiz about the edited change; other DuckTutor commands remain
-   locked until DuckTutor confirms the answer. Explicitly abandon an obsolete task through
-   `/ducktutor:checkpoint --abandon`, or use `/ducktutor:start <new task>` to retire it and begin
-   fresh without claiming understanding.
+6. Complete the required checkpoint in your configured response mode; other DuckTutor commands
+   remain locked until it passes. Change modes through `/ducktutor:config --mode=<mode>`, reset all
+   plugin state through `/ducktutor:clean`, or use `/ducktutor:start <new task>` to retire the old
+   task and begin fresh without claiming understanding.
 7. Revise or reject the change when understanding or evidence is weak.
 
 ## Contributing

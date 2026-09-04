@@ -180,11 +180,14 @@ check_bash() {
   fi
   if [[ -n "$harness_args" ]]; then
     case "$harness_args" in
-      show|"enter teach-me"|"enter start"|"enter start --new-task"|"enter explain"|"enter review"|"enter hint"|"enter checkpoint"|"enter implement"|"enter implement --force-agent"|checkpoint-require) return 0 ;;
-      "checkpoint-pass developer-confirmed")
-        ask "DuckTutor wants to record that you answered the required comprehension checkpoint. Approve only after a satisfactory answer."
+      show|"enter teach-me"|"enter start"|"enter start --new-task"|"enter explain"|"enter review"|"enter hint"|"enter checkpoint"|"enter implement"|"enter implement --force-agent"|checkpoint-require|"checkpoint-require deep-reflection"|"checkpoint-record correct"|"checkpoint-record incorrect"|"checkpoint-record unsure") return 0 ;;
+      "checkpoint-pass quiz-confirmed")
+        ask "DuckTutor wants to record that the adaptive checkpoint reached two correct choices within three questions. Approve only if that result was observed."
         ;;
-      "checkpoint-abandon developer-confirmed")
+      "checkpoint-pass free-text-confirmed")
+        ask "DuckTutor wants to record a satisfactory free-text checkpoint response. Approve only after the developer explained a load-bearing decision and failure mode."
+        ;;
+      "checkpoint-abandon choice-confirmed")
         ask "DuckTutor wants to abandon the pending task without recording understanding. Approve only if you intend to discard that task and its ownership map."
         ;;
       *) deny "DuckTutor blocked an unsupported command-harness action." ;;
@@ -213,8 +216,8 @@ check_bash() {
       phase)
         case "$state_args" in
           "phase predicted"|"phase attempted"|"phase verified") return 0 ;;
-          "phase explained developer-confirmed")
-            ask "DuckTutor wants to record that you explained the solution in your own words. Approve only after you actually did so."
+          "phase assessed assessment-confirmed")
+            ask "DuckTutor wants to mark this task assessed from its completed checkpoint. This records evidence, not proof of understanding."
             ;;
           *) deny "DuckTutor only allows one valid sequential learning phase per state update." ;;
         esac

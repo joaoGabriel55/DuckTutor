@@ -44,9 +44,9 @@ if DUCKTUTOR_BENCHMARK_TEST_ROOT="$ROOT" DUCKTUTOR_BENCHMARK_LABEL="fixture-mode
         "$output" == *'understanding-over-output'* &&
         "$output" == *'Per-pair averages'* &&
         "$output" == *'DuckTutor prompt overhead'* &&
-        "$output" == *'explain-approach | 10 | 2 | 8 (80.0%) | 75 | 996 | 921 | -913'* &&
+        "$output" == *'explain-approach | 10 | 2 | 8 (80.0%) | 75 | 1001 | 926 | -918'* &&
         "$output" == *'Actual run totals'* &&
-        "$output" == *'Aggregate | 100 | 20 | 80 (80.0%) | 750 | 9956 | 9206 | -9126'* &&
+        "$output" == *'Aggregate | 100 | 20 | 80 (80.0%) | 750 | 10010 | 9260 | -9180'* &&
         ! -e "$ROOT/benchmark-side-effect" ]]; then
     printf 'PASS token benchmark: reports reproducible per-scenario and aggregate estimates\n'
   else

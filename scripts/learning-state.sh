@@ -10,7 +10,7 @@ const path = require("path");
 const { spawnSync } = require("child_process");
 
 const [, , projectDir, command = "show", ...args] = process.argv;
-const phases = ["grounded", "predicted", "attempted", "verified", "explained"];
+const phases = ["grounded", "predicted", "attempted", "verified", "assessed"];
 
 function fail(message) {
   process.stderr.write(`DuckTutor state: ${message}\n`);
@@ -31,7 +31,7 @@ const repositoryRoot = fs.realpathSync(repositoryRootResult.stdout.trim());
 const currentBranch = branchResult.stdout.trim() || "detached";
 const currentHead = headResult.status === 0 ? headResult.stdout.trim() : null;
 const idle = {
-  schema: 1,
+  schema: 4,
   task: "",
   phase: "idle",
   learnerPaths: [],
@@ -39,11 +39,16 @@ const idle = {
   repositoryRoot: null,
   branch: null,
   baselineHead: null,
-  explanationConfirmedAt: null,
+  responseMode: "quiz",
+  deepReflectionRequired: false,
+  assessmentConfirmedAt: null,
+  assessmentMode: null,
   engagedCommands: [],
   activeCommand: null,
   implementationMode: "hybrid",
   checkpointRequired: false,
+  quizQuestionsAnswered: 0,
+  quizCorrectAnswers: 0,
   checkpointRequestedAt: null,
   checkpointCompletedAt: null,
   lastAbandonedTask: null,
@@ -75,13 +80,24 @@ function withFreshness(value) {
 function readState() {
   try {
     const value = JSON.parse(fs.readFileSync(statePath, "utf8"));
-    if (value.schema !== 1 || !Array.isArray(value.learnerPaths) || !Array.isArray(value.agentPaths) ||
+    if (![1, 2, 3, 4].includes(value.schema) || !Array.isArray(value.learnerPaths) || !Array.isArray(value.agentPaths) ||
         (value.unexplainedAgentChanges !== undefined && !Array.isArray(value.unexplainedAgentChanges))) {
       fail("stored state has an unsupported shape");
     }
+    const {
+      explanationConfirmedAt: legacyExplanationConfirmedAt,
+      quizConfirmedAt: legacyQuizConfirmedAt,
+      ...stored
+    } = value;
     return withFreshness({
       ...idle,
-      ...value,
+      ...stored,
+      schema: 4,
+      phase: value.phase === "explained" ? "assessed" : value.phase,
+      responseMode: ["quiz", "free-text"].includes(value.responseMode) ? value.responseMode : "quiz",
+      deepReflectionRequired: value.deepReflectionRequired === true,
+      assessmentConfirmedAt: value.assessmentConfirmedAt ?? legacyQuizConfirmedAt ?? legacyExplanationConfirmedAt ?? null,
+      assessmentMode: value.assessmentMode ?? (legacyQuizConfirmedAt ? "quiz" : legacyExplanationConfirmedAt ? "free-text" : null),
       engagedCommands: Array.isArray(value.engagedCommands) ? value.engagedCommands : [],
       checkpointRequired: value.checkpointRequired === true,
       unexplainedAgentChanges: activeUnexplainedChanges(value.unexplainedAgentChanges || []),
@@ -96,7 +112,7 @@ function readState() {
 function writeState(value) {
   fs.mkdirSync(stateDir, { recursive: true, mode: 0o700 });
   const { stale: _stale, staleReason: _staleReason, ...stored } = value;
-  const next = { ...stored, schema: 1, updatedAt: new Date().toISOString() };
+  const next = { ...stored, schema: 4, updatedAt: new Date().toISOString() };
   const temporary = `${statePath}.${process.pid}.tmp`;
   fs.writeFileSync(temporary, `${JSON.stringify(next, null, 2)}\n`, { mode: 0o600 });
   fs.renameSync(temporary, statePath);
@@ -201,6 +217,8 @@ switch (command) {
       engagedCommands: current.engagedCommands,
       activeCommand: current.activeCommand,
       implementationMode: current.implementationMode,
+      responseMode: current.responseMode,
+      deepReflectionRequired: current.implementationMode === "force-agent" && current.deepReflectionRequired,
       checkpointCompletedAt: current.checkpointCompletedAt,
       lastAbandonedTask: current.lastAbandonedTask,
       lastAbandonedAt: current.lastAbandonedAt,
@@ -230,6 +248,7 @@ switch (command) {
         baselineHead: currentHead,
         engagedCommands: [...new Set([...current.engagedCommands, entry])],
         activeCommand: entry,
+        responseMode: current.responseMode,
         lastAbandonedTask: retired?.lastAbandonedTask ?? current.lastAbandonedTask,
         lastAbandonedAt: retired?.lastAbandonedAt ?? current.lastAbandonedAt,
         unexplainedAgentChanges: retired?.unexplainedAgentChanges ?? current.unexplainedAgentChanges,
@@ -248,13 +267,14 @@ switch (command) {
       engagedCommands: [...new Set([...current.engagedCommands, entry])],
       activeCommand: entry,
       implementationMode: entry === "implement" ? (forceAgent ? "force-agent" : "hybrid") : current.implementationMode,
+      deepReflectionRequired: current.deepReflectionRequired || forceAgent,
     });
     break;
   }
   case "checkpoint": {
     const current = readState();
     const action = args[0];
-    if (action === "abandon" && args.length === 2 && args[1] === "developer-confirmed") {
+    if (action === "abandon" && args.length === 2 && args[1] === "choice-confirmed") {
       if (!current.checkpointRequired) fail("no comprehension checkpoint is pending");
       const retiredAt = new Date().toISOString();
       writeState({
@@ -264,30 +284,77 @@ switch (command) {
         baselineHead: currentHead,
         engagedCommands: current.engagedCommands,
         activeCommand: "checkpoint",
+        responseMode: current.responseMode,
         lastAbandonedTask: current.task,
         lastAbandonedAt: retiredAt,
         unexplainedAgentChanges: current.unexplainedAgentChanges,
       });
     } else if (current.stale) {
       fail(`state is stale: ${current.staleReason}`);
-    } else if (action === "require" && args.length === 1) {
+    } else if (action === "require" && (args.length === 1 || (args.length === 2 && args[1] === "deep-reflection"))) {
       if (!["predicted", "attempted", "verified"].includes(current.phase)) fail("an active implementation is required");
       writeState({
         ...current,
+        deepReflectionRequired: current.deepReflectionRequired || args[1] === "deep-reflection",
         checkpointRequired: true,
+        quizQuestionsAnswered: 0,
+        quizCorrectAnswers: 0,
         checkpointRequestedAt: current.checkpointRequestedAt || new Date().toISOString(),
+        checkpointCompletedAt: null,
+        assessmentMode: null,
       });
-    } else if (action === "pass" && args.length === 2 && args[1] === "developer-confirmed") {
+    } else if (action === "record" && args.length === 2 && ["correct", "incorrect", "unsure"].includes(args[1])) {
+      if (!current.checkpointRequired) fail("no adaptive quiz checkpoint is pending");
+      if (current.responseMode !== "quiz" || current.deepReflectionRequired) {
+        fail("quiz results can be recorded only when the effective checkpoint mode is quiz");
+      }
+      if (current.quizQuestionsAnswered >= 3) fail("the adaptive quiz already reached its three-question limit");
+      writeState({
+        ...current,
+        quizQuestionsAnswered: current.quizQuestionsAnswered + 1,
+        quizCorrectAnswers: current.quizCorrectAnswers + (args[1] === "correct" ? 1 : 0),
+      });
+    } else if (action === "pass" && args.length === 2 && ["quiz-confirmed", "free-text-confirmed"].includes(args[1])) {
       if (!current.checkpointRequired) fail("no comprehension checkpoint is pending");
+      const effectiveMode = current.deepReflectionRequired ? "deep-reflection" : current.responseMode;
+      const expectedToken = effectiveMode === "quiz" ? "quiz-confirmed" : "free-text-confirmed";
+      if (args[1] !== expectedToken) fail(`checkpoint completion requires ${expectedToken} in ${effectiveMode} mode`);
+      if (effectiveMode === "quiz" && (current.quizQuestionsAnswered < 2 || current.quizCorrectAnswers < 2)) {
+        fail("adaptive quiz requires two correct answers within three questions");
+      }
       writeState({
         ...current,
         checkpointRequired: false,
         checkpointRequestedAt: null,
         checkpointCompletedAt: new Date().toISOString(),
+        assessmentMode: effectiveMode,
       });
     } else {
-      fail("checkpoint requires require, pass developer-confirmed, or abandon developer-confirmed");
+      fail("checkpoint requires require [deep-reflection], record correct|incorrect|unsure, a mode-matched pass token, or abandon choice-confirmed");
     }
+    break;
+  }
+  case "config": {
+    const current = readState();
+    if (args.length !== 3 || args[0] !== "set" || !["quiz", "free-text"].includes(args[1]) || args[2] !== "argument-confirmed") {
+      fail("config requires set quiz|free-text argument-confirmed");
+    }
+    const responseMode = args[1];
+    const changed = responseMode !== current.responseMode;
+    const completedButUnassessed = changed && current.phase === "verified" && Boolean(current.checkpointCompletedAt);
+    writeState({
+      ...current,
+      repositoryRoot: current.phase === "idle" ? repositoryRoot : current.repositoryRoot,
+      branch: current.phase === "idle" ? currentBranch : current.branch,
+      baselineHead: current.phase === "idle" ? currentHead : current.baselineHead,
+      responseMode,
+      quizQuestionsAnswered: changed ? 0 : current.quizQuestionsAnswered,
+      quizCorrectAnswers: changed ? 0 : current.quizCorrectAnswers,
+      checkpointRequired: completedButUnassessed ? true : current.checkpointRequired,
+      checkpointRequestedAt: completedButUnassessed ? new Date().toISOString() : current.checkpointRequestedAt,
+      checkpointCompletedAt: completedButUnassessed ? null : current.checkpointCompletedAt,
+      assessmentMode: completedButUnassessed ? null : current.assessmentMode,
+    });
     break;
   }
   case "scope": {
@@ -320,20 +387,30 @@ switch (command) {
     } else if (learnerPaths.length === 0) {
       fail("scope requires at least one learner-owned file unless force-agent mode is active");
     }
-    writeState({ ...current, learnerPaths, agentPaths });
+    const currentPaths = new Set([...current.learnerPaths, ...current.agentPaths]);
+    const scopeExpanded = currentPaths.size > 0 && [...learnerPaths, ...agentPaths].some((candidate) => !currentPaths.has(candidate));
+    writeState({
+      ...current,
+      learnerPaths,
+      agentPaths,
+      deepReflectionRequired: current.deepReflectionRequired || scopeExpanded,
+    });
     break;
   }
   case "phase": {
     const current = readState();
     const next = args[0];
-    const explanationConfirmed = next === "explained" && args[1] === "developer-confirmed";
-    const expectedArgs = next === "explained" ? 2 : 1;
-    if (args.length !== expectedArgs || !phases.includes(next) || (next === "explained" && !explanationConfirmed)) {
-      fail("phase requires a valid phase name; explained also requires developer-confirmed");
+    const assessmentConfirmed = next === "assessed" && args[1] === "assessment-confirmed";
+    const expectedArgs = next === "assessed" ? 2 : 1;
+    if (args.length !== expectedArgs || !phases.includes(next) || (next === "assessed" && !assessmentConfirmed)) {
+      fail("phase requires a valid phase name; assessed also requires assessment-confirmed");
     }
     if (current.stale) fail(`state is stale: ${current.staleReason}`);
-    if (next === "explained" && current.checkpointRequired) {
-      fail("complete the required comprehension checkpoint before explained");
+    if (next === "assessed" && current.checkpointRequired) {
+      fail("complete the required checkpoint before assessed");
+    }
+    if (next === "assessed" && (!current.checkpointCompletedAt || !current.assessmentMode)) {
+      fail("record a completed checkpoint before assessed");
     }
     const currentIndex = phases.indexOf(current.phase);
     const nextIndex = phases.indexOf(next);
@@ -346,20 +423,25 @@ switch (command) {
     writeState({
       ...current,
       phase: next,
-      explanationConfirmedAt: explanationConfirmed ? new Date().toISOString() : current.explanationConfirmedAt,
+      assessmentConfirmedAt: assessmentConfirmed ? new Date().toISOString() : current.assessmentConfirmedAt,
     });
     break;
   }
-  case "clear":
-    if (readState().checkpointRequired) fail("complete the required comprehension checkpoint before clearing state");
-    try {
-      fs.unlinkSync(statePath);
-    } catch (error) {
-      if (error.code !== "ENOENT") throw error;
+  case "clear": {
+    const current = readState();
+    if (current.checkpointRequired) fail("complete the required comprehension checkpoint before clearing state");
+    writeState({ ...idle, responseMode: current.responseMode });
+    break;
+  }
+  case "clean": {
+    if (args.length !== 1 || args[0] !== "argument-confirmed") {
+      fail("clean requires argument-confirmed");
     }
+    fs.rmSync(stateDir, { recursive: true, force: true });
     process.stdout.write(`${JSON.stringify(idle)}\n`);
     break;
+  }
   default:
-    fail("supported commands are show, begin, scope, phase, engage, checkpoint, and clear");
+    fail("supported commands are show, begin, scope, phase, engage, checkpoint, config, clear, and clean");
 }
 NODE

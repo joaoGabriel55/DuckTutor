@@ -1,6 +1,6 @@
 {
   "name": "ducktutor",
-  "version": "0.11.0",
+  "version": "0.12.0",
   "description": "A concise Socratic pair tutor with project-native context, deterministic learning gates, and hybrid file ownership.",
   "author": {
     "name": "Gabriel Quaresma",
@@ -23,7 +23,7 @@
   "interface": {
     "displayName": "DuckTutor",
     "shortDescription": "Understand and own every AI-assisted change",
-    "longDescription": "Learn with project-native instructions and skills, persistent task state, explicit file ownership, scoped support edits, and required comprehension checkpoints.",
+    "longDescription": "Learn with project-native instructions and skills, persistent task state, explicit file ownership, and configurable quiz or free-text checkpoints.",
     "developerName": "Gabriel Quaresma",
     "category": "Productivity",
     "capabilities": [
