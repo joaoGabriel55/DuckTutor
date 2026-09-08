@@ -21,15 +21,16 @@ Use the **tutor** skill. For exact token `--force-agent`, remove it from the tas
 `"${CLAUDE_PLUGIN_ROOT}/scripts/command-harness.sh" enter implement --force-agent`; otherwise run
 the same command without the flag. Stop if rejected. A prior non-implement DuckTutor command unlocks
 implementation. Read state before source. Use the prepared task when arguments contain no task text.
-If task, prediction, or ownership is missing, establish it here using configured `responseMode`;
-do not redirect.
+If task, prediction, or ownership is missing, establish it here; do not redirect.
 
 In hybrid mode, do not dictate or edit learner-owned files. In force-agent mode, propose an all-agent
-map and await approval; its checkpoint requires deep reflection. Edit only agent-editable files
-through approved native operations; reapprove scope growth, which also requires deep reflection.
-Inspect the real diff and leave unobserved gates incomplete.
+map and await approval; its checkpoint requires deep reflection. Record the approved map with
+`"${CLAUDE_PLUGIN_ROOT}/scripts/command-harness.sh" scope learner:<path> agent:<path>`. Edit only
+agent-editable files through approved native operations; reapprove scope growth, which also requires
+deep reflection. Leave unobserved gates incomplete.
 
 After implementation, run `"${CLAUDE_PLUGIN_ROOT}/scripts/command-harness.sh" checkpoint-require`;
-native edits do this automatically. Inspect the diff and run the configured checkpoint. After it
-passes, request the mode-matched `checkpoint-pass` through the harness.
+native edits do this automatically. Inspect the diff and record the developer's own check results
+with `"${CLAUDE_PLUGIN_ROOT}/scripts/command-harness.sh" verify "<evidence>"`.
+Run the configured checkpoint, then request the mode-matched `checkpoint-pass`.
 While pending, only `/checkpoint` and fresh `/start` remain.

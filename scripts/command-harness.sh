@@ -35,8 +35,32 @@ case "$COMMAND" in
     [[ "$#" -eq 2 && "$2" == "choice-confirmed" ]] || exit 1
     DUCKTUTOR_PROJECT_DIR="${DUCKTUTOR_PROJECT_DIR:-$PWD}" "$STATE" checkpoint abandon choice-confirmed
     ;;
+  lessons)
+    [[ "$#" -eq 1 ]] || exit 1
+    DUCKTUTOR_PROJECT_DIR="${DUCKTUTOR_PROJECT_DIR:-$PWD}" "$STATE" lessons
+    ;;
+  next)
+    [[ "$#" -eq 1 ]] || exit 1
+    DUCKTUTOR_PROJECT_DIR="${DUCKTUTOR_PROJECT_DIR:-$PWD}" "$STATE" next
+    ;;
+  begin)
+    [[ "$#" -eq 2 ]] || exit 1
+    DUCKTUTOR_PROJECT_DIR="${DUCKTUTOR_PROJECT_DIR:-$PWD}" "$STATE" begin "$2"
+    ;;
+  scope)
+    [[ "$#" -ge 2 ]] || exit 1
+    DUCKTUTOR_PROJECT_DIR="${DUCKTUTOR_PROJECT_DIR:-$PWD}" "$STATE" scope "${@:2}"
+    ;;
+  verify)
+    [[ "$#" -eq 2 ]] || exit 1
+    DUCKTUTOR_PROJECT_DIR="${DUCKTUTOR_PROJECT_DIR:-$PWD}" "$STATE" verify "$2"
+    ;;
+  complete)
+    [[ "$#" -eq 1 ]] || exit 1
+    DUCKTUTOR_PROJECT_DIR="${DUCKTUTOR_PROJECT_DIR:-$PWD}" "$STATE" complete
+    ;;
   *)
-    printf 'DuckTutor harness: supported commands are show, enter, checkpoint-require [deep-reflection], checkpoint-record, checkpoint-pass, and checkpoint-abandon\n' >&2
+    printf 'DuckTutor harness: supported commands are show, next, enter, begin, scope, verify, checkpoint-require [deep-reflection], checkpoint-record, checkpoint-pass, checkpoint-abandon, complete, and lessons\n' >&2
     exit 1
     ;;
 esac

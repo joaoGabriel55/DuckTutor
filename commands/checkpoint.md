@@ -29,8 +29,9 @@ in quiz mode run the tutor skill's adaptive quiz. After each choice, run
 For multi-select, record correct only when the response matches every correct option and no incorrect
 option; `I'm unsure` cannot be combined with another choice.
 Keep the checkpoint pending unless two answers are correct within three. After three without a pass,
-run `checkpoint-require` through the harness for a fresh attempt.
+run `checkpoint-require` through the harness for a fresh attempt. On `remediationRequired`, reteach
+through `/ducktutor:teach-me` or `/ducktutor:explain`.
 In free-text or deep-reflection mode, ask for the load-bearing decision and failure mode in the
-developer's own words; correct misconceptions. Run `checkpoint-pass` with `free-text-confirmed`,
-then `"${CLAUDE_PLUGIN_ROOT}/scripts/learning-state.sh" phase assessed assessment-confirmed`.
+developer's own words; correct misconceptions. Run `checkpoint-pass` with `free-text-confirmed`.
+Once assessed, run `"${CLAUDE_PLUGIN_ROOT}/scripts/command-harness.sh" complete`.
 Call the result evidence, not proof of understanding. Never edit.

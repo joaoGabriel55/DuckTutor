@@ -55,9 +55,11 @@ expect_text "zero-model config expansion hook configured" 'UserPromptExpansion' 
 expect_text "config expansion targets deterministic hook" 'config-command\.sh' "$ROOT/hooks/hooks.json"
 expect_text "clean expansion targets deterministic hook" 'clean-command\.sh' "$ROOT/hooks/hooks.json"
 
+# SessionStart is read-only context restoration and is deliberately global.
+# Enforcement events must stay scoped to explicit DuckTutor commands.
 if HOOKS_FILE="$ROOT/hooks/hooks.json" node -e '
   const hooks = JSON.parse(require("fs").readFileSync(process.env.HOOKS_FILE, "utf8")).hooks;
-  const globalEnforcement = ["SessionStart", "PreToolUse", "PostToolUse", "UserPromptSubmit"];
+  const globalEnforcement = ["PreToolUse", "PostToolUse", "UserPromptSubmit"];
   process.exit(globalEnforcement.some((event) => event in hooks) ? 1 : 0);
 '; then
   printf 'PASS teaching contract: enforcement is inactive outside explicit DuckTutor commands\n'
@@ -65,6 +67,9 @@ else
   printf 'FAIL teaching contract: enforcement is inactive outside explicit DuckTutor commands\n'
   FAILURES=$((FAILURES + 1))
 fi
+
+expect_text "session context restores across sessions" 'SessionStart' "$ROOT/hooks/hooks.json"
+expect_text "session restore targets the read-only hook" 'session-start\.sh' "$ROOT/hooks/hooks.json"
 
 for file in "$ROOT"/commands/{teach-me,start,explain,review,hint,checkpoint,implement}.md; do
   expect_text "$(basename "$file") scopes the mutation guard" 'guard\.sh tool' "$file"

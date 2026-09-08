@@ -96,6 +96,20 @@ expect_denied "Git grep text conversion" "git grep --textconv password"
 expect_denied "Git grep external process" "git grep --ext-grep password"
 expect_denied "Git grep pager process" "git grep -O less password"
 
+denied_tool_payload='{"tool_name":"Bash","tool_input":{"command":"npm test"}}'
+DUCKTUTOR_PROJECT_DIR="$PROJECT" bash -c 'printf "%s" "$1" | "$2" tool' _ "$denied_tool_payload" "$GUARD" >/dev/null
+denial_lessons="$(DUCKTUTOR_PROJECT_DIR="$PROJECT" "$STATE" lessons)"
+if STATE_JSON="$denial_lessons" node -e '
+  const value = JSON.parse(process.env.STATE_JSON);
+  if (value.total < 1) process.exit(1);
+  if (!value.recent.some((entry) => entry.type === "guard-denied" && entry.tool === "Bash" && entry.reason.includes("read-only"))) process.exit(1);
+'; then
+  printf 'PASS denied: guard denial is mechanically logged to the lessons file\n'
+else
+  printf 'FAIL denied: guard denial is mechanically logged to the lessons file\n'
+  FAILURES=$((FAILURES + 1))
+fi
+
 expect_command_asked() {
   local name="$1"
   local command="$2"
@@ -112,6 +126,9 @@ expect_command_asked() {
 
 expect_allowed "learning state read" "$STATE show"
 expect_allowed "learning state read through plugin variable" '"${CLAUDE_PLUGIN_ROOT}/scripts/learning-state.sh" show'
+expect_allowed "learning state lessons read" "$STATE lessons"
+expect_denied "learning state lessons read rejects extra arguments" "$STATE lessons extra"
+expect_allowed "command harness lessons read" "$HARNESS lessons"
 expect_allowed "project context inventory" "$PROJECT_CONTEXT show"
 expect_allowed "project context inventory through plugin variable" '"${CLAUDE_PLUGIN_ROOT}/scripts/project-context.sh" show'
 expect_denied "unsupported project context command" "$PROJECT_CONTEXT scan"
@@ -133,6 +150,15 @@ expect_command_asked "confirmed free-text checkpoint completion" "$HARNESS check
 expect_command_asked "confirmed checkpoint abandonment" "$HARNESS checkpoint-abandon choice-confirmed"
 expect_denied "unconfirmed checkpoint abandonment" "$HARNESS checkpoint-abandon"
 expect_denied "unsupported command harness action" "$HARNESS bypass"
+expect_allowed "command harness next action lookup" "$HARNESS next"
+expect_allowed "command harness task completion" "$HARNESS complete"
+expect_allowed "command harness task begin" "$HARNESS begin \"prevent duplicate checkout\""
+expect_command_asked "command harness ownership map" "$HARNESS scope learner:src/app.js agent:test/app.test.js"
+expect_command_asked "command harness verification evidence" "$HARNESS verify \"ran the suite, 42 passing\""
+# Evidence is free-form developer text, but it must not smuggle shell composition
+# past the guard; such a summary has to be rephrased rather than weakening the check.
+expect_denied "verification evidence cannot compose commands" "$HARNESS verify \"ran tests; rm -rf /\""
+expect_denied "next takes no arguments" "$HARNESS next --json"
 
 bare_harness_payload='{"tool_input":{"command":"command-harness.sh enter explain"}}'
 bare_harness_output="$(printf '%s' "$bare_harness_payload" | guard bash)"
@@ -148,6 +174,10 @@ expect_allowed "learning phase advance" "$STATE phase attempted"
 expect_denied "unconfirmed assessment phase" "$STATE phase assessed"
 expect_command_asked "confirmed assessment phase" "$STATE phase assessed assessment-confirmed"
 expect_command_asked "learning state clear" "$STATE clear"
+expect_allowed "learning state next action lookup" "$STATE next"
+expect_allowed "learning state task completion" "$STATE complete"
+expect_command_asked "learning state verification evidence" "$STATE verify \"ran the suite\""
+expect_denied "learning state next takes no arguments" "$STATE next now"
 
 unscoped_payload='{"tool_name":"Edit","tool_input":{"file_path":"src/app.js","old_string":"a","new_string":"b"}}'
 unscoped_output="$(printf '%s' "$unscoped_payload" | guard tool)"

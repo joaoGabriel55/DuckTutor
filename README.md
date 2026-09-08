@@ -42,6 +42,10 @@ technical judgment.
   correct answers within three scenarios; free-text mode requires a satisfactory explanation of a
   load-bearing decision and failure mode. Until completion, other commands remain locked except
   `/config`, `/clean`, `/checkpoint`, and a fresh `/start`.
+- After two failed checkpoint cycles on the same task, DuckTutor stops retesting and routes back to
+  `/teach-me` or `/explain` to rebuild the mental model before another attempt.
+- You run your own build and test commands; DuckTutor records the evidence you report and cannot
+  advance a task to verified without it.
 - A disproportionate diff or hidden/system coupling also escalates the checkpoint to deep reflection.
   If narrowing cannot restore confidence, DuckTutor recommends rejecting the diff and restarting
   from a smaller plan.
@@ -50,6 +54,9 @@ technical judgment.
   recording understanding; its agent-edited paths remain marked for later review while still present
   in the working diff.
 - DuckTutor never hides a write inside shell commands or expands into unrelated cleanup.
+- Guard denials and checkpoint failures/abandonments are mechanically appended to a bounded lessons
+  log by the hooks themselves, never self-reported by the model, and a capped recent summary is
+  restored at session start so past blocked approaches and missed checkpoints are not repeated.
 
 > **Hybrid ownership is enforced:** DuckTutor's default-deny hook checks native edits against the
 > active ownership map. Agent-editable files still require approval; learner-owned and unscoped files
@@ -157,7 +164,7 @@ the shape of both series remains readable; the legend identifies each line by na
 
 Claude Opus 5 reduced output by 68.1% overall, while Codex Sol reduced it by 31.9% and produced more
 text in two scenarios. Neither run achieved positive net token savings because the DuckTutor prompt
-added 926 approximate input tokens to every comparison. DuckTutor's purpose is behavioral:
+added 926 approximate input tokens to every comparison at that version. DuckTutor's purpose is behavioral:
 encouraging smaller, explainable changes. These observations do not establish total-token efficiency.
 
 ### Codex prompt optimization since v0.10.0
@@ -166,7 +173,7 @@ The v0.10.0 Codex run showed that the shared prompt cost dominated short interac
 simple verdict scenarios produced more output. Version 0.11.0 therefore compresses the shared skill
 from 672 to 449 words, caps routine answers at 120 words and simple verdicts at 80, and tells the
 model not to restate supplied facts. The current 450-word skill has estimated DuckTutor prompt
-overhead of 926 tokens per call on these inputs, down from 1,277—approximately 351 tokens (27.5%).
+overhead of 915 tokens per call on these inputs, down from 1,277—approximately 362 tokens (28.3%).
 This is an input-only estimate. The results above show measured output and net savings from the
 current live benchmark runs.
 
@@ -256,8 +263,8 @@ Reset DuckTutor manually when its persisted state is no longer useful:
 
 Like config, this command runs through a `UserPromptExpansion` hook without invoking Claude. It
 removes all DuckTutor state stored in Git metadata, including active tasks, checkpoints, retired-change
-history, and response-mode configuration. Project files and Git history are untouched; the next
-session starts in quiz mode.
+history, the lessons log, and response-mode configuration. Project files and Git history are
+untouched; the next session starts in quiz mode.
 
 ### `/ducktutor:implement [--force-agent] [problem or feature and optional file scope]`
 
@@ -299,11 +306,30 @@ permissions, file ownership, or user authorization.
 DuckTutor stores one active task per Git repository under `.git/ducktutor/state.json`, so it does not
 dirty the working tree. The state records the task, ownership map, and current phase:
 `grounded → predicted → attempted → verified → assessed`. It also records command engagement and
-whether a comprehension checkpoint is pending. The next explicit DuckTutor command reloads this state
-after startup, resume, clear, or context compaction. State records progress; it does not prove
-understanding or replace inspection of the current diff. The map cannot be used while another branch
+whether a comprehension checkpoint is pending.
+
+Phases advance from events the harness observes, not from a phase the model announces: recording an
+approved ownership map predicts, a scoped edit attempts, recorded verification evidence verifies, and
+a passed checkpoint assesses. Verification and assessment form a join — a task becomes `assessed`
+only once both have landed, in either order. Because phases can only advance one step and never move
+backward, a skipped or invented transition fails instead of silently desynchronizing.
+
+Session start restores this state into a new session; it never enforces anything. The next explicit
+DuckTutor command reloads it after startup, resume, clear, or context compaction. State records
+progress; it does not prove understanding or replace inspection of the current diff. The map cannot be used while another branch
 is checked out or when rewritten history no longer descends from its approved baseline. DuckTutor
 then requires fresh inspection and ownership-map approval before editing.
+
+## Lessons log
+
+Alongside `state.json`, DuckTutor keeps an append-only `.git/ducktutor/lessons.jsonl`. The hooks
+themselves—not the model—append an entry whenever the guard denies a native edit or shell command,
+a checkpoint is answered incorrectly, or a checkpoint is explicitly abandoned. Each entry is
+mechanically captured ground truth (timestamp, event type, tool, and denial reason or task label),
+capped at 200 entries on disk. Session start restores only the five most recent entries as a compact
+summary, so past blocked approaches and missed checkpoints inform the next attempt without the
+model re-reading or re-deriving history, and without unbounded token growth as the log accumulates.
+`/ducktutor:clean` removes the log along with the rest of DuckTutor's Git-local state.
 
 ## MCP-assisted verification
 
@@ -356,18 +382,32 @@ marketplace is intentionally separate from editing this source repository.
 
 ## Typical loop
 
+![Flow chart of the DuckTutor loop, from /ducktutor:start through implementation, observation, review, and the mandatory checkpoint, with the harness phase rail alongside](docs/typical-loop-flow.svg)
+
+Grey edges advance the loop and orange edges mark a gate refusing to advance; every refusal returns to
+`/ducktutor:start`. Dashed boxes are the routes taken only when the main one does not apply. The rail on
+the left is the harness phase, moved by the event beside it.
+
 1. Start a feature or fix with `/ducktutor:start <problem>` in Claude Code or `$ducktutor:tutor` in Codex.
 2. Reason through one prediction or trade-off question, then choose `/ducktutor:implement` or
    `/ducktutor:implement --force-agent`.
 3. Approve the proposed ownership map and implement the scoped change.
 4. Let DuckTutor perform scoped MCP-assisted end-to-end observation when a suitable tool is
-   available, and run any remaining shell test command yourself.
+   available, and run any remaining shell test command yourself. Record what you observed; DuckTutor
+   stores that evidence rather than assuming the change works.
 5. Run `/ducktutor:review` on the actual changes.
 6. Complete the required checkpoint in your configured response mode; other DuckTutor commands
    remain locked until it passes. Change modes through `/ducktutor:config --mode=<mode>`, reset all
    plugin state through `/ducktutor:clean`, or use `/ducktutor:start <new task>` to retire the old
    task and begin fresh without claiming understanding.
 7. Revise or reject the change when understanding or evidence is weak.
+8. When the checkpoint passes, the task is retired and the loop starts clean. If two checkpoint
+   cycles fail, DuckTutor stops retesting and sends you back to `/ducktutor:teach-me` or
+   `/ducktutor:explain` to rebuild the mental model first.
+
+The phases — `grounded → predicted → attempted → verified → assessed` — are advanced by the harness
+from those events, not by the model deciding it has reached one. You supply the task, the ownership
+map, and the evidence; everything else is mechanical.
 
 ## Contributing
 

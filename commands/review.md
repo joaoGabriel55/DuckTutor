@@ -24,8 +24,7 @@ review `$ARGUMENTS` or the staged and unstaged diff. If none exists, offer singl
 Check correctness, requirements, failures, tests, scope, abstractions, fit, and assumptions. Flag
 `unexplainedAgentChanges` still in the diff. Order findings by severity; give location, consequence,
 evidence, and smallest correction. With blockers, ask one guiding question using `responseMode`. Otherwise
-state residual risk. Recommend rejecting the diff and restarting from a smaller plan when narrowing
-cannot restore confidence. For a disproportionate diff or hidden/system coupling, run
+state residual risk. Recommend rejecting and restarting smaller when narrowing cannot restore
+confidence. For a disproportionate diff or hidden/system coupling, run
 `checkpoint-require deep-reflection` when an implementation task is active; otherwise report the
-risk. For other active tasks, run the tutor skill's configured checkpoint. Once passed,
-request `"${CLAUDE_PLUGIN_ROOT}/scripts/learning-state.sh" phase assessed assessment-confirmed`.
+risk. For other active tasks, run the tutor skill's configured checkpoint.

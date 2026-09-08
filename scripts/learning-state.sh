@@ -24,6 +24,31 @@ if (gitDirResult.status !== 0) fail("the current project is not a Git repository
 
 const stateDir = path.join(gitDirResult.stdout.trim(), "ducktutor");
 const statePath = path.join(stateDir, "state.json");
+const lessonsPath = path.join(stateDir, "lessons.jsonl");
+const MAX_LESSONS = 200;
+// Failed checkpoint cycles tolerated before the loop routes back to teaching.
+const REMEDIATION_THRESHOLD = 2;
+
+function appendLesson(entry) {
+  try {
+    fs.mkdirSync(stateDir, { recursive: true, mode: 0o700 });
+    const existing = fs.existsSync(lessonsPath)
+      ? fs.readFileSync(lessonsPath, "utf8").split("\n").filter(Boolean)
+      : [];
+    const next = [...existing, JSON.stringify({ ts: new Date().toISOString(), ...entry })].slice(-MAX_LESSONS);
+    fs.writeFileSync(lessonsPath, `${next.join("\n")}\n`, { mode: 0o600 });
+  } catch (_) {
+    // Best-effort log; never block the state transition it documents.
+  }
+}
+
+function readLessons() {
+  try {
+    return fs.readFileSync(lessonsPath, "utf8").split("\n").filter(Boolean).map((line) => JSON.parse(line));
+  } catch (_) {
+    return [];
+  }
+}
 const repositoryRootResult = spawnSync("git", ["-C", projectDir, "rev-parse", "--show-toplevel"], { encoding: "utf8" });
 const branchResult = spawnSync("git", ["-C", projectDir, "branch", "--show-current"], { encoding: "utf8" });
 const headResult = spawnSync("git", ["-C", projectDir, "rev-parse", "HEAD"], { encoding: "utf8" });
@@ -31,7 +56,7 @@ const repositoryRoot = fs.realpathSync(repositoryRootResult.stdout.trim());
 const currentBranch = branchResult.stdout.trim() || "detached";
 const currentHead = headResult.status === 0 ? headResult.stdout.trim() : null;
 const idle = {
-  schema: 4,
+  schema: 5,
   task: "",
   phase: "idle",
   learnerPaths: [],
@@ -53,11 +78,34 @@ const idle = {
   checkpointCompletedAt: null,
   lastAbandonedTask: null,
   lastAbandonedAt: null,
+  verifiedEvidence: null,
+  verifiedAt: null,
+  checkpointCycles: 0,
+  remediationRequired: false,
+  remediationTopic: null,
+  lastCompletedTask: null,
+  lastCompletedAt: null,
   unexplainedAgentChanges: [],
   updatedAt: null,
   stale: false,
   staleReason: null,
 };
+
+// A single-line, bounded, control-character-free string. Used for both the task
+// label and developer-supplied verification evidence; both are untrusted data.
+function isPlainLabel(value) {
+  return Boolean(value) && value.length <= 200 && !/[\u0000-\u001f\u007f]/.test(value);
+}
+
+// `assessed` is a join: it is reached once the developer has recorded
+// verification evidence AND passed the comprehension checkpoint. Whichever
+// lands last performs the advance, so neither ordering dead-ends.
+function withAssessmentJoin(value) {
+  const verified = value.phase === "verified" && Boolean(value.verifiedAt);
+  const checkpointComplete = !value.checkpointRequired && Boolean(value.checkpointCompletedAt) && Boolean(value.assessmentMode);
+  if (!verified || !checkpointComplete) return value;
+  return { ...value, phase: "assessed", assessmentConfirmedAt: value.assessmentConfirmedAt || new Date().toISOString() };
+}
 
 function withFreshness(value) {
   if (value.phase === "idle" && value.engagedCommands.length === 0 && !value.checkpointRequired) {
@@ -80,7 +128,7 @@ function withFreshness(value) {
 function readState() {
   try {
     const value = JSON.parse(fs.readFileSync(statePath, "utf8"));
-    if (![1, 2, 3, 4].includes(value.schema) || !Array.isArray(value.learnerPaths) || !Array.isArray(value.agentPaths) ||
+    if (![1, 2, 3, 4, 5].includes(value.schema) || !Array.isArray(value.learnerPaths) || !Array.isArray(value.agentPaths) ||
         (value.unexplainedAgentChanges !== undefined && !Array.isArray(value.unexplainedAgentChanges))) {
       fail("stored state has an unsupported shape");
     }
@@ -92,7 +140,7 @@ function readState() {
     return withFreshness({
       ...idle,
       ...stored,
-      schema: 4,
+      schema: 5,
       phase: value.phase === "explained" ? "assessed" : value.phase,
       responseMode: ["quiz", "free-text"].includes(value.responseMode) ? value.responseMode : "quiz",
       deepReflectionRequired: value.deepReflectionRequired === true,
@@ -100,6 +148,13 @@ function readState() {
       assessmentMode: value.assessmentMode ?? (legacyQuizConfirmedAt ? "quiz" : legacyExplanationConfirmedAt ? "free-text" : null),
       engagedCommands: Array.isArray(value.engagedCommands) ? value.engagedCommands : [],
       checkpointRequired: value.checkpointRequired === true,
+      verifiedEvidence: typeof value.verifiedEvidence === "string" ? value.verifiedEvidence : null,
+      verifiedAt: value.verifiedAt ?? null,
+      checkpointCycles: Number.isInteger(value.checkpointCycles) ? value.checkpointCycles : 0,
+      remediationRequired: value.remediationRequired === true,
+      remediationTopic: typeof value.remediationTopic === "string" ? value.remediationTopic : null,
+      lastCompletedTask: value.lastCompletedTask ?? null,
+      lastCompletedAt: value.lastCompletedAt ?? null,
       unexplainedAgentChanges: activeUnexplainedChanges(value.unexplainedAgentChanges || []),
     });
   } catch (error) {
@@ -112,7 +167,7 @@ function readState() {
 function writeState(value) {
   fs.mkdirSync(stateDir, { recursive: true, mode: 0o700 });
   const { stale: _stale, staleReason: _staleReason, ...stored } = value;
-  const next = { ...stored, schema: 4, updatedAt: new Date().toISOString() };
+  const next = { ...stored, schema: 5, updatedAt: new Date().toISOString() };
   const temporary = `${statePath}.${process.pid}.tmp`;
   fs.writeFileSync(temporary, `${JSON.stringify(next, null, 2)}\n`, { mode: 0o600 });
   fs.renameSync(temporary, statePath);
@@ -204,7 +259,7 @@ switch (command) {
     const current = readState();
     if (current.checkpointRequired) fail("complete the required comprehension checkpoint first");
     const task = args.join(" ").trim();
-    if (!task || task.length > 200 || /[\u0000-\u001f\u007f]/.test(task)) {
+    if (!isPlainLabel(task)) {
       fail("begin requires a single-line task summary of at most 200 characters");
     }
     writeState({
@@ -222,6 +277,8 @@ switch (command) {
       checkpointCompletedAt: current.checkpointCompletedAt,
       lastAbandonedTask: current.lastAbandonedTask,
       lastAbandonedAt: current.lastAbandonedAt,
+      lastCompletedTask: current.lastCompletedTask,
+      lastCompletedAt: current.lastCompletedAt,
       unexplainedAgentChanges: current.unexplainedAgentChanges,
     });
     break;
@@ -235,8 +292,15 @@ switch (command) {
     if ((!forceAgent && !newTask && args.length !== 1) || !commands.includes(entry)) {
       fail("engage requires a DuckTutor command name; implement accepts --force-agent and start accepts --new-task");
     }
-    if (current.checkpointRequired && entry !== "checkpoint" && !newTask) {
-      fail("answer the required comprehension checkpoint before using another DuckTutor command");
+    // While a checkpoint is pending only the checkpoint itself (or a fresh task)
+    // may run. Remediation additionally reopens the teaching commands, so a
+    // developer who could not demonstrate understanding can go relearn instead
+    // of being retested indefinitely.
+    const remediationRoute = current.remediationRequired && ["teach-me", "explain"].includes(entry);
+    if (current.checkpointRequired && entry !== "checkpoint" && !newTask && !remediationRoute) {
+      fail(current.remediationRequired
+        ? "rebuild understanding with /ducktutor:teach-me or /ducktutor:explain before another command"
+        : "answer the required comprehension checkpoint before using another DuckTutor command");
     }
     if (newTask) {
       const retiresPendingTask = current.checkpointRequired && Boolean(current.task);
@@ -277,6 +341,7 @@ switch (command) {
     if (action === "abandon" && args.length === 2 && args[1] === "choice-confirmed") {
       if (!current.checkpointRequired) fail("no comprehension checkpoint is pending");
       const retiredAt = new Date().toISOString();
+      appendLesson({ type: "checkpoint-abandoned", task: current.task, phase: current.phase });
       writeState({
         ...idle,
         repositoryRoot,
@@ -293,9 +358,24 @@ switch (command) {
       fail(`state is stale: ${current.staleReason}`);
     } else if (action === "require" && (args.length === 1 || (args.length === 2 && args[1] === "deep-reflection"))) {
       if (!["predicted", "attempted", "verified"].includes(current.phase)) fail("an active implementation is required");
+      // A cycle that reached the three-question limit without two correct
+      // answers is a failed attempt at demonstrating understanding.
+      const failedCycle = current.checkpointRequired && current.quizQuestionsAnswered >= 3 && current.quizCorrectAnswers < 2;
+      const checkpointCycles = current.checkpointCycles + (failedCycle ? 1 : 0);
+      const remediationRequired = current.remediationRequired || checkpointCycles >= REMEDIATION_THRESHOLD;
+      if (remediationRequired && !current.remediationRequired) {
+        appendLesson({ type: "checkpoint-remediation", task: current.task, phase: current.phase, cycles: checkpointCycles });
+      }
       writeState({
         ...current,
-        deepReflectionRequired: current.deepReflectionRequired || args[1] === "deep-reflection",
+        // A successful scoped edit is what proves an attempt was made.
+        phase: current.phase === "predicted" && current.learnerPaths.length + current.agentPaths.length > 0
+          ? "attempted"
+          : current.phase,
+        deepReflectionRequired: current.deepReflectionRequired || remediationRequired || args[1] === "deep-reflection",
+        checkpointCycles,
+        remediationRequired,
+        remediationTopic: remediationRequired ? current.remediationTopic || current.task : current.remediationTopic,
         checkpointRequired: true,
         quizQuestionsAnswered: 0,
         quizCorrectAnswers: 0,
@@ -309,6 +389,9 @@ switch (command) {
         fail("quiz results can be recorded only when the effective checkpoint mode is quiz");
       }
       if (current.quizQuestionsAnswered >= 3) fail("the adaptive quiz already reached its three-question limit");
+      if (args[1] === "incorrect") {
+        appendLesson({ type: "checkpoint-incorrect", task: current.task, phase: current.phase });
+      }
       writeState({
         ...current,
         quizQuestionsAnswered: current.quizQuestionsAnswered + 1,
@@ -322,13 +405,17 @@ switch (command) {
       if (effectiveMode === "quiz" && (current.quizQuestionsAnswered < 2 || current.quizCorrectAnswers < 2)) {
         fail("adaptive quiz requires two correct answers within three questions");
       }
-      writeState({
+      writeState(withAssessmentJoin({
         ...current,
         checkpointRequired: false,
         checkpointRequestedAt: null,
         checkpointCompletedAt: new Date().toISOString(),
         assessmentMode: effectiveMode,
-      });
+        // Understanding was demonstrated; the remediation loop is satisfied.
+        checkpointCycles: 0,
+        remediationRequired: false,
+        remediationTopic: null,
+      }));
     } else {
       fail("checkpoint requires require [deep-reflection], record correct|incorrect|unsure, a mode-matched pass token, or abandon choice-confirmed");
     }
@@ -361,8 +448,8 @@ switch (command) {
     const current = readState();
     if (current.phase === "idle") fail("begin a task before setting its ownership map");
     if (current.stale) fail(`state is stale: ${current.staleReason}`);
-    if (!["predicted", "attempted"].includes(current.phase)) {
-      fail("ownership can change only during the predicted or attempted phase");
+    if (!["grounded", "predicted", "attempted"].includes(current.phase)) {
+      fail("ownership can change only during the grounded, predicted, or attempted phase");
     }
     if (args.length === 0) fail("scope requires at least one learner: or agent: path");
     const learnerPaths = [];
@@ -393,6 +480,9 @@ switch (command) {
       ...current,
       learnerPaths,
       agentPaths,
+      // Recording an approved ownership map is the event that establishes a
+      // prediction; re-scoping later leaves the phase where it already is.
+      phase: current.phase === "grounded" ? "predicted" : current.phase,
       deepReflectionRequired: current.deepReflectionRequired || scopeExpanded,
     });
     break;
@@ -427,6 +517,78 @@ switch (command) {
     });
     break;
   }
+  case "verify": {
+    const current = readState();
+    if (current.stale) fail(`state is stale: ${current.staleReason}`);
+    if (current.phase !== "attempted") fail(`verification can be recorded only from attempted, not ${current.phase}`);
+    const evidence = args.join(" ").trim();
+    if (!isPlainLabel(evidence)) {
+      fail("verify requires a single-line evidence summary of at most 200 characters");
+    }
+    writeState(withAssessmentJoin({
+      ...current,
+      phase: "verified",
+      verifiedEvidence: evidence,
+      verifiedAt: new Date().toISOString(),
+    }));
+    break;
+  }
+  case "complete": {
+    const current = readState();
+    if (args.length !== 0) fail("complete accepts no arguments");
+    if (current.checkpointRequired) fail("complete the required comprehension checkpoint first");
+    if (current.phase !== "assessed") fail(`only an assessed task can be completed, not ${current.phase}`);
+    const completedAt = new Date().toISOString();
+    writeState({
+      ...idle,
+      repositoryRoot,
+      branch: currentBranch,
+      baselineHead: currentHead,
+      engagedCommands: current.engagedCommands,
+      responseMode: current.responseMode,
+      lastAbandonedTask: current.lastAbandonedTask,
+      lastAbandonedAt: current.lastAbandonedAt,
+      lastCompletedTask: {
+        task: current.task,
+        assessmentMode: current.assessmentMode,
+        verifiedEvidence: current.verifiedEvidence,
+        learnerPaths: current.learnerPaths,
+        agentPaths: current.agentPaths,
+        completedAt,
+      },
+      lastCompletedAt: completedAt,
+      unexplainedAgentChanges: current.unexplainedAgentChanges,
+    });
+    break;
+  }
+  case "next": {
+    if (args.length !== 0) fail("next accepts no arguments");
+    const current = readState();
+    const plan = (action, command, reason, blocked = false) => ({ action, command, reason, blocked });
+    let result;
+    if (current.stale) {
+      result = plan("clear-stale", "/ducktutor:start", `state is stale: ${current.staleReason}`, true);
+    } else if (current.remediationRequired) {
+      result = plan("remediate", "/ducktutor:teach-me", "repeated checkpoints failed; rebuild the mental model before reattempting", true);
+    } else if (current.checkpointRequired) {
+      const mode = current.deepReflectionRequired ? "deep-reflection" : current.responseMode;
+      result = plan("run-checkpoint", "/ducktutor:checkpoint", `a ${mode} checkpoint is pending`, true);
+    } else if (current.phase === "idle") {
+      result = plan("begin-task", "/ducktutor:start", "no task is active");
+    } else if (current.phase === "grounded") {
+      result = plan("record-scope", "/ducktutor:implement", "approve and record the learner/agent ownership map");
+    } else if (current.phase === "predicted") {
+      result = plan("implement-scoped-edits", "/ducktutor:implement", "make the scoped change");
+    } else if (current.phase === "attempted") {
+      result = plan("record-verification", "/ducktutor:implement", "run the checks yourself, then record the evidence");
+    } else if (current.phase === "verified") {
+      result = plan("run-checkpoint", "/ducktutor:checkpoint", "verified; demonstrate understanding to close the loop");
+    } else {
+      result = plan("complete-task", "/ducktutor:checkpoint", "assessed; retire the task");
+    }
+    process.stdout.write(`${JSON.stringify({ schema: 1, phase: current.phase, ...result })}\n`);
+    break;
+  }
   case "clear": {
     const current = readState();
     if (current.checkpointRequired) fail("complete the required comprehension checkpoint before clearing state");
@@ -441,7 +603,13 @@ switch (command) {
     process.stdout.write(`${JSON.stringify(idle)}\n`);
     break;
   }
+  case "lessons": {
+    if (args.length !== 0) fail("lessons accepts no arguments");
+    const entries = readLessons();
+    process.stdout.write(`${JSON.stringify({ schema: 1, total: entries.length, recent: entries.slice(-5) })}\n`);
+    break;
+  }
   default:
-    fail("supported commands are show, begin, scope, phase, engage, checkpoint, config, clear, and clean");
+    fail("supported commands are show, next, begin, scope, phase, verify, engage, checkpoint, complete, config, clear, clean, and lessons");
 }
 NODE

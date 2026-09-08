@@ -6,8 +6,36 @@ ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 MODE="${1:-}"
 PAYLOAD="$(cat 2>/dev/null || true)"
 
+log_lesson() {
+  local kind="$1" tool="$2" reason="$3"
+  KIND="$kind" TOOL="$tool" REASON="$reason" PROJECT="${DUCKTUTOR_PROJECT_DIR:-$PWD}" node -e '
+    const fs = require("fs");
+    const path = require("path");
+    const { spawnSync } = require("child_process");
+    try {
+      const gitDirResult = spawnSync("git", ["-C", process.env.PROJECT, "rev-parse", "--absolute-git-dir"], { encoding: "utf8" });
+      if (gitDirResult.status !== 0) process.exit(0);
+      const stateDir = path.join(gitDirResult.stdout.trim(), "ducktutor");
+      const lessonsPath = path.join(stateDir, "lessons.jsonl");
+      fs.mkdirSync(stateDir, { recursive: true, mode: 0o700 });
+      const existing = fs.existsSync(lessonsPath)
+        ? fs.readFileSync(lessonsPath, "utf8").split("\n").filter(Boolean)
+        : [];
+      const entry = JSON.stringify({
+        ts: new Date().toISOString(),
+        type: process.env.KIND,
+        tool: process.env.TOOL || null,
+        reason: process.env.REASON || null,
+      });
+      const next = [...existing, entry].slice(-200);
+      fs.writeFileSync(lessonsPath, `${next.join("\n")}\n`, { mode: 0o600 });
+    } catch (_) {}
+  ' 2>/dev/null || true
+}
+
 deny() {
   local reason="$1"
+  log_lesson "guard-denied" "${TOOL_NAME:-}" "$reason"
   REASON="$reason" node -e '
     const reason = process.env.REASON || "DuckTutor blocked this action.";
     process.stdout.write(JSON.stringify({
@@ -180,7 +208,14 @@ check_bash() {
   fi
   if [[ -n "$harness_args" ]]; then
     case "$harness_args" in
-      show|"enter teach-me"|"enter start"|"enter start --new-task"|"enter explain"|"enter review"|"enter hint"|"enter checkpoint"|"enter implement"|"enter implement --force-agent"|checkpoint-require|"checkpoint-require deep-reflection"|"checkpoint-record correct"|"checkpoint-record incorrect"|"checkpoint-record unsure") return 0 ;;
+      show|lessons|next|complete|"enter teach-me"|"enter start"|"enter start --new-task"|"enter explain"|"enter review"|"enter hint"|"enter checkpoint"|"enter implement"|"enter implement --force-agent"|checkpoint-require|"checkpoint-require deep-reflection"|"checkpoint-record correct"|"checkpoint-record incorrect"|"checkpoint-record unsure") return 0 ;;
+      "begin "*) return 0 ;;
+      "scope "*)
+        ask "DuckTutor wants to record the learner/agent ownership map for this task. Approve only if every agent-editable path is one you intend the agent to write."
+        ;;
+      "verify "*)
+        ask "DuckTutor wants to record your verification evidence and advance the task to verified. Approve only if you actually ran those checks and observed that result."
+        ;;
       "checkpoint-pass quiz-confirmed")
         ask "DuckTutor wants to record that the adaptive checkpoint reached two correct choices within three questions. Approve only if that result was observed."
         ;;
@@ -209,9 +244,16 @@ check_bash() {
   if [[ -n "$state_args" ]]; then
     state_action="${state_args%% *}"
     case "$state_action" in
-      show)
-        [[ "$state_args" == "show" ]] || deny "DuckTutor state reads do not accept additional arguments."
+      show|lessons|next)
+        [[ "$state_args" == "$state_action" ]] || deny "DuckTutor state reads do not accept additional arguments."
         return 0
+        ;;
+      complete)
+        [[ "$state_args" == "$state_action" ]] || deny "DuckTutor task completion does not accept additional arguments."
+        return 0
+        ;;
+      verify)
+        ask "DuckTutor wants to record your verification evidence and advance the task to verified. Approve only if you actually ran those checks and observed that result."
         ;;
       phase)
         case "$state_args" in
