@@ -105,8 +105,9 @@ DUCKTUTOR_BENCHMARK_LABEL='Claude 4.2, model and settings used' \
   node scripts/benchmark-tokens.mjs --samples 3
 ```
 
-The benchmark uses five self-contained cases matching the review principles above: explainability,
-diff proportionality, premature abstraction, hidden coupling, and understanding over blind trust.
+The benchmark uses eight self-contained cases matching the review and learning-loop principles above:
+explainability, diff proportionality, premature abstraction, hidden coupling, understanding over
+blind trust, event-driven completion, checkpoint remediation, and lessons-based recovery.
 Each case runs in baseline and DuckTutor modes, and each call gets a separate temporary Git
 repository with response-only instructions. It reports approximate input tokens, output tokens,
 output savings, and net savings using `ceil(characters / 4)`. The input delta measures DuckTutor
@@ -116,15 +117,15 @@ text; positive net savings mean that reduction covered this prompt overhead. Neg
 reported rather than hidden—short interactions may cost more total tokens while still avoiding a
 large generated implementation or an unjustified change.
 
-Three samples make 30 model calls. Use `--samples 1` for a faster 10-call comparison. Results depend
+Three samples make 48 model calls. Use `--samples 1` for a faster 16-call comparison. Results depend
 on the model, CLI configuration, prompt caching, and sampling, and are not
 billing measurements. The benchmark does not quantify the additional value of a smaller diff,
 earlier design rejection, or developer understanding.
 
-### Results — 2026-09-04 (v0.13.0)
+### Results — 2026-09-08 (v0.14.0)
 
-These three-sample runs compare the same five prompts and report per-pair averages, except for the
-aggregate rows, which report all 15 calls per mode. “Net saved” subtracts the measured DuckTutor
+These three-sample runs compare all eight v0.14.0 prompts and report per-pair averages, except for the
+aggregate rows, which report all 24 calls per mode. “Net saved” subtracts the measured DuckTutor
 prompt input overhead; it still excludes command prompts, restored context, task state, and hook messages.
 Because the supplied labels did not record complete CLI settings, these results are non-reproducible
 observations rather than product claims.
@@ -136,12 +137,15 @@ so an exact reproduction requires a new run with a more specific label.
 
 | Scenario | Baseline output | DuckTutor output | Output saved | Net saved |
 | --- | ---: | ---: | ---: | ---: |
-| Explain approach | 320.3 | 162.3 | 158.0 (49.3%) | -768.0 |
-| Diff proportionality | 128.7 | 143.3 | -14.7 (-11.4%) | -940.7 |
-| Premature abstraction | 284.7 | 183 | 101.7 (35.7%) | -824.3 |
-| Reasoning and coupling | 243 | 143.7 | 99.3 (40.9%) | -826.7 |
-| Understanding over output | 95 | 97 | -2 (-2.1%) | -928 |
-| Aggregate (total) | 3215 | 2188 | 1027 (31.9%) | -12863 |
+| Explain approach | 272 | 164 | 108 (39.7%) | -807 |
+| Diff proportionality | 136.3 | 152.3 | -16 (-11.7%) | -931 |
+| Premature abstraction | 225 | 190.3 | 34.7 (15.4%) | -880.3 |
+| Reasoning and coupling | 254 | 148.3 | 105.7 (41.6%) | -809.3 |
+| Understanding over output | 95.7 | 85 | 10.7 (11.1%) | -904.3 |
+| Event-driven completion | 45.3 | 51 | -5.7 (-12.5%) | -920.7 |
+| Checkpoint remediation | 74.3 | 62 | 12.3 (16.6%) | -902.7 |
+| Lessons-based recovery | 59.3 | 82.7 | -23.3 (-39.3%) | -938.3 |
+| Aggregate (total) | 3486 | 2807 | 679 (19.5%) | -21281 |
 
 #### Claude Opus 5
 
@@ -150,21 +154,24 @@ recorded, so an exact reproduction requires a new run with a more specific label
 
 | Scenario | Baseline output | DuckTutor output | Output saved | Net saved |
 | --- | ---: | ---: | ---: | ---: |
-| Explain approach | 960.7 | 251.3 | 709.3 (73.8%) | -216.7 |
-| Diff proportionality | 766 | 278.3 | 487.7 (63.7%) | -438.3 |
-| Premature abstraction | 764 | 229.7 | 534.3 (69.9%) | -391.7 |
-| Reasoning and coupling | 1132.3 | 309.7 | 822.7 (72.7%) | -103.3 |
-| Understanding over output | 552.3 | 265 | 287.3 (52.0%) | -638.7 |
-| Aggregate (total) | 12526 | 4002 | 8524 (68.1%) | -5366 |
+| Explain approach | 915.3 | 210.3 | 705 (77.0%) | -210.0 |
+| Diff proportionality | 644.3 | 262 | 382.3 (59.3%) | -532.7 |
+| Premature abstraction | 792.7 | 279.3 | 513.3 (64.8%) | -401.7 |
+| Reasoning and coupling | 1014.7 | 313.3 | 701.3 (69.1%) | -213.7 |
+| Understanding over output | 553.7 | 269.3 | 284.3 (51.4%) | -630.7 |
+| Event-driven completion | 277.3 | 148.3 | 129.0 (46.5%) | -786.0 |
+| Checkpoint remediation | 523.7 | 151.7 | 372 (71.0%) | -543 |
+| Lessons-based recovery | 388.3 | 168.7 | 219.7 (56.6%) | -695.3 |
+| Aggregate (total) | 15330 | 5409 | 9921 (64.7%) | -12039 |
 
 The chart plots baseline and DuckTutor output for every scenario. Each provider has its own scale so
 the shape of both series remains readable; the legend identifies each line by name and color.
 
 ![Baseline and DuckTutor output-token line charts for Codex Sol and Claude Opus 5](docs/benchmark-output-comparison.svg)
 
-Claude Opus 5 reduced output by 68.1% overall, while Codex Sol reduced it by 31.9% and produced more
-text in two scenarios. Neither run achieved positive net token savings because the DuckTutor prompt
-added 926 approximate input tokens to every comparison at that version. DuckTutor's purpose is behavioral:
+Claude Opus 5 reduced output by 64.7% overall, while Codex Sol reduced it by 19.5% and produced more
+text in three scenarios. Neither run achieved positive net token savings because the DuckTutor prompt
+added 915 approximate input tokens to every comparison. DuckTutor's purpose is behavioral:
 encouraging smaller, explainable changes. These observations do not establish total-token efficiency.
 
 ### Codex prompt optimization since v0.10.0
