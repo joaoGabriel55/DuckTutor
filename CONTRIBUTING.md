@@ -173,6 +173,7 @@ scripts/test-teaching-contract.sh
 scripts/test-teaching-eval.sh
 scripts/test-token-benchmark.sh
 scripts/test-bump-version.sh
+scripts/test-version-automation.sh
 ```
 
 Enforce the model-facing prompt budget:
@@ -288,7 +289,8 @@ actual change, quiz mode varies correct positions, and risk escalation cannot be
 
 ## Release version
 
-Use `scripts/bump-version.sh <major.minor.patch>` to update all Claude and Codex release manifests
-together. The command rejects invalid versions, downgrades, unchanged versions, and pre-existing
-manifest drift. Follow [RELEASING.md](RELEASING.md) to validate, commit, tag, push, and create the
-GitHub release.
+Add a changeset with `pnpm changeset` for each user-facing change. After changes land on `main`, the
+Changesets workflow opens or updates a release PR. Its version command updates `package.json` and
+synchronizes the Claude marketplace, Claude plugin, and Codex plugin manifests. The existing
+`scripts/bump-version.sh <major.minor.patch>` command remains available for manual recovery and now
+updates all four manifests together. Follow [RELEASING.md](RELEASING.md) for the complete flow.

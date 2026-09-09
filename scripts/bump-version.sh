@@ -17,6 +17,7 @@ const path = require("path");
 
 const [, , root, nextVersion] = process.argv;
 const targets = [
+  { path: "package.json", get: (value) => value.version, set: (value) => { value.version = nextVersion; } },
   { path: ".claude-plugin/plugin.json", get: (value) => value.version, set: (value) => { value.version = nextVersion; } },
   { path: ".codex-plugin/plugin.json", get: (value) => value.version, set: (value) => { value.version = nextVersion; } },
   {

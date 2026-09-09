@@ -94,6 +94,7 @@ if node -e '
   const fs = require("fs");
   const root = process.argv[1];
   const versions = [
+    JSON.parse(fs.readFileSync(`${root}/package.json`)).version,
     JSON.parse(fs.readFileSync(`${root}/.codex-plugin/plugin.json`)).version,
     JSON.parse(fs.readFileSync(`${root}/.claude-plugin/plugin.json`)).version,
     JSON.parse(fs.readFileSync(`${root}/.claude-plugin/marketplace.json`)).plugins[0].version,
