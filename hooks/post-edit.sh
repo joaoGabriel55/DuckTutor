@@ -37,7 +37,7 @@ STATE_JSON="$STATE_JSON" node -e '
   process.stdout.write(JSON.stringify({
     hookSpecificOutput: {
       hookEventName: "PostToolUse",
-      additionalContext: `DuckTutor recorded a required ${mode} checkpoint after this edit. Finish the scoped implementation, inspect the real diff, then ${guidance}. The response is evidence, not proof of understanding.`,
+      additionalContext: `DuckTutor advanced this task to ${state.phase || "attempted"} and recorded a required ${mode} checkpoint after this edit. Finish the scoped implementation, inspect the real diff, have the developer run their own checks and record the evidence, then ${guidance}. The response is evidence, not proof of understanding.`,
     },
   }) + "\n");
 '

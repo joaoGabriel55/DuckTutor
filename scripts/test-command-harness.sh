@@ -205,7 +205,15 @@ expect_failure "checkpoint cannot pass after one correct choice" run_harness che
 expect_success "record second correct checkpoint choice" run_harness checkpoint-record correct
 expect_success "confirmed quiz result clears checkpoint" run_harness checkpoint-pass quiz-confirmed
 expect_success "commands resume after checkpoint" run_harness enter review
-expect_success "record completed attempt" env DUCKTUTOR_PROJECT_DIR="$PROJECT" "$STATE" phase attempted
+# checkpoint-require already advanced predicted -> attempted, so re-recording it
+# must be rejected by the strict one-step rule.
+if [[ "$(run_harness show)" == *'"phase":"attempted"'* ]]; then
+  printf 'PASS harness: checkpoint-require advanced the attempt\n'
+else
+  printf 'FAIL harness: checkpoint-require advanced the attempt\n'
+  FAILURES=$((FAILURES + 1))
+fi
+expect_failure "attempt is not recorded twice" env DUCKTUTOR_PROJECT_DIR="$PROJECT" "$STATE" phase attempted
 expect_success "record completed verification" env DUCKTUTOR_PROJECT_DIR="$PROJECT" "$STATE" phase verified
 expect_success "record completed assessment" env DUCKTUTOR_PROJECT_DIR="$PROJECT" "$STATE" phase assessed assessment-confirmed
 expect_failure "new-task flag is start-only" run_harness enter review --new-task
@@ -250,6 +258,24 @@ else
   FAILURES=$((FAILURES + 1))
 fi
 expect_success "commands resume after explicit abandonment" run_harness enter review
+
+lessons_after_abandon="$(run_harness lessons)"
+if STATE_JSON="$lessons_after_abandon" node -e '
+  const value = JSON.parse(process.env.STATE_JSON);
+  if (value.total < 1) process.exit(1);
+  if (!value.recent.some((entry) => entry.type === "checkpoint-abandoned" && entry.task === "task to abandon")) process.exit(1);
+'; then printf 'PASS harness: checkpoint abandonment is mechanically logged\n'; else
+  printf 'FAIL harness: checkpoint abandonment is mechanically logged\n'
+  FAILURES=$((FAILURES + 1))
+fi
+
+lessons_session_output="$(printf '{"source":"resume","cwd":"%s","hook_event_name":"SessionStart"}' "$PROJECT" | DUCKTUTOR_PROJECT_DIR="$PROJECT" "$SESSION_HOOK" 2>/dev/null || true)"
+if [[ "$lessons_session_output" == *'DuckTutor lessons log'* && "$lessons_session_output" == *'checkpoint abandoned during task'* ]]; then
+  printf 'PASS harness: session context surfaces the mechanically recorded lessons log\n'
+else
+  printf 'FAIL harness: session context surfaces the mechanically recorded lessons log\n'
+  FAILURES=$((FAILURES + 1))
+fi
 
 git -C "$STALE_PROJECT" init -q
 git -C "$STALE_PROJECT" config user.name DuckTutor-Test
@@ -344,6 +370,53 @@ else
   printf 'FAIL harness: session context caps total unexplained paths\n'
   FAILURES=$((FAILURES + 1))
 fi
+
+# --- new harness verbs --------------------------------------------------------
+
+LOOP_PROJECT="$(mktemp -d "${TMPDIR:-/tmp}/ducktutor-loop.XXXXXX")"
+git -C "$LOOP_PROJECT" init -q
+git -C "$LOOP_PROJECT" config user.name DuckTutor-Test
+git -C "$LOOP_PROJECT" config user.email test@ducktutor.invalid
+git -C "$LOOP_PROJECT" commit --allow-empty -q -m initial
+
+run_loop() {
+  DUCKTUTOR_PROJECT_DIR="$LOOP_PROJECT" "$HARNESS" "$@"
+}
+
+expect_failure "next takes no arguments" run_loop next now
+expect_failure "begin requires a task" run_loop begin
+expect_failure "verify requires evidence" run_loop verify
+expect_failure "complete takes no arguments" run_loop complete now
+expect_failure "scope requires an entry" run_loop scope
+
+expect_success "harness enters a fresh task" run_loop enter start --new-task
+expect_success "harness begins a task" run_loop begin "harness loop task"
+expect_success "harness records ownership" run_loop scope learner:src/app.js agent:test/app.test.js
+expect_success "harness enters implementation" run_loop enter implement
+expect_success "harness requires a checkpoint" run_loop checkpoint-require
+expect_success "harness records first choice" run_loop checkpoint-record correct
+expect_success "harness records second choice" run_loop checkpoint-record correct
+expect_success "harness passes the checkpoint" run_loop checkpoint-pass quiz-confirmed
+expect_success "harness records verification" run_loop verify "ran the suite, 42 passing"
+
+loop_state="$(run_loop show)"
+if [[ "$loop_state" == *'"phase":"assessed"'* ]]; then
+  printf 'PASS harness: event-driven loop reaches assessed\n'
+else
+  printf 'FAIL harness: event-driven loop reaches assessed\n'
+  FAILURES=$((FAILURES + 1))
+fi
+
+expect_success "harness completes the task" run_loop complete
+completion_session_output="$(printf '{"source":"startup","cwd":"%s","hook_event_name":"SessionStart"}' "$LOOP_PROJECT" | DUCKTUTOR_PROJECT_DIR="$LOOP_PROJECT" "$SESSION_HOOK" 2>/dev/null || true)"
+if [[ "$completion_session_output" == *'completed its previous task'* && "$completion_session_output" == *'harness loop task'* ]]; then
+  printf 'PASS harness: session context restores the completed task\n'
+else
+  printf 'FAIL harness: session context restores the completed task\n'
+  FAILURES=$((FAILURES + 1))
+fi
+
+rm -rf "$LOOP_PROJECT"
 
 if (( FAILURES > 0 )); then
   printf '%s command-harness test(s) failed\n' "$FAILURES"

@@ -19,11 +19,12 @@ hooks:
 
 Use the **tutor** skill in guide-only mode. First run
 `"${CLAUDE_PLUGIN_ROOT}/scripts/command-harness.sh" enter start --new-task`; stop if it rejects
-entry. Require `$ARGUMENTS`, inspect context, and begin state. State intended
+entry. Require `$ARGUMENTS` and inspect context, then run
+`"${CLAUDE_PLUGIN_ROOT}/scripts/command-harness.sh" begin "<task>"`. State intended
 behavior, smallest adequate change, riskiest edge case, and observable check. Flag disproportionate
 diffs or abstractions.
 
-Ask one prediction or trade-off question using configured `responseMode`; wait, correct
-misconceptions, then record `predicted`. End with
+Ask one prediction or trade-off question using configured `responseMode`; wait and correct
+misconceptions. End with
 `/ducktutor:implement` for hybrid ownership or
 `/ducktutor:implement --force-agent` for an approved all-agent map. Defer the map to implementation.

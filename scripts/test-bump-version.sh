@@ -11,9 +11,29 @@ cleanup() { rm -rf "$PROJECT"; }
 trap cleanup EXIT
 
 mkdir -p "$PROJECT/.claude-plugin" "$PROJECT/.codex-plugin"
+cp "$ROOT/package.json" "$PROJECT/package.json"
 cp "$ROOT/.claude-plugin/plugin.json" "$PROJECT/.claude-plugin/plugin.json"
 cp "$ROOT/.claude-plugin/marketplace.json" "$PROJECT/.claude-plugin/marketplace.json"
 cp "$ROOT/.codex-plugin/plugin.json" "$PROJECT/.codex-plugin/plugin.json"
+
+# Pin the fixture to a fixed base version so these assertions stay meaningful
+# regardless of the version the live manifests happen to carry.
+PROJECT_ROOT="$PROJECT" node -e '
+  const fs = require("fs");
+  const root = process.env.PROJECT_ROOT;
+  for (const relative of ["package.json", ".claude-plugin/plugin.json", ".codex-plugin/plugin.json"]) {
+    const path = `${root}/${relative}`;
+    const manifest = JSON.parse(fs.readFileSync(path, "utf8"));
+    manifest.version = "0.12.0";
+    fs.writeFileSync(path, `${JSON.stringify(manifest, null, 2)}\n`);
+  }
+  const marketplacePath = `${root}/.claude-plugin/marketplace.json`;
+  const marketplace = JSON.parse(fs.readFileSync(marketplacePath, "utf8"));
+  for (const entry of marketplace.plugins) {
+    if (entry.name === "ducktutor") entry.version = "0.12.0";
+  }
+  fs.writeFileSync(marketplacePath, `${JSON.stringify(marketplace, null, 2)}\n`);
+'
 
 expect_success() {
   local name="$1"
@@ -48,6 +68,7 @@ if PROJECT_ROOT="$PROJECT" node -e '
   const fs = require("fs");
   const root = process.env.PROJECT_ROOT;
   const versions = [
+    JSON.parse(fs.readFileSync(`${root}/package.json`)).version,
     JSON.parse(fs.readFileSync(`${root}/.claude-plugin/plugin.json`)).version,
     JSON.parse(fs.readFileSync(`${root}/.codex-plugin/plugin.json`)).version,
     JSON.parse(fs.readFileSync(`${root}/.claude-plugin/marketplace.json`)).plugins.find((entry) => entry.name === "ducktutor").version,

@@ -1,6 +1,16 @@
 {
-  "description": "Handle deterministic zero-model DuckTutor commands.",
+  "description": "Handle deterministic zero-model DuckTutor commands and restore learning state into new sessions.",
   "hooks": {
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "\"${CLAUDE_PLUGIN_ROOT}\"/hooks/session-start.sh"
+          }
+        ]
+      }
+    ],
     "UserPromptExpansion": [
       {
         "matcher": "^(ducktutor:)?config$",

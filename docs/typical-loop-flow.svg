@@ -1,0 +1,249 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1000" height="1350" viewBox="0 0 1000 1350" role="img" aria-labelledby="title description">
+  <title id="title">The DuckTutor typical loop</title>
+  <desc id="description">Flow chart of the DuckTutor loop. Start a task, answer one prediction or trade-off question, then choose guided implementation or an approved all-agent force-agent map. Approve the ownership map, implement the scoped change, observe the change and record evidence, and review the actual Git diff. A confidence decision either returns you to start or sends you to a mandatory checkpoint. Passing retires the task; failing retries once, and two failed cycles route back to teach-me or explain. A rail on the left marks the harness phases grounded, predicted, attempted, verified and assessed, each advanced by the event beside it.</desc>
+
+  <style>
+    :root { color-scheme: light dark; }
+
+    .background { fill: #ffffff; }
+
+    .node       { fill: #f6f8fa; stroke: #d0d7de; stroke-width: 1.25; }
+    .node-entry { fill: #f6f8fa; stroke: #1a7f37; stroke-width: 2; }
+    .node-gate  { fill: #f6f8fa; stroke: #bc4c00; stroke-width: 2; }
+    .node-alt   { fill: #f6f8fa; stroke: #8c959f; stroke-width: 1.25; stroke-dasharray: 5 4; }
+    .diamond    { fill: #fff1e5; stroke: #bc4c00; stroke-width: 1.75; }
+
+    .edge      { fill: none; stroke: #57606a; stroke-width: 1.4; }
+    .edge-gate { fill: none; stroke: #bc4c00; stroke-width: 1.4; }
+    .ah-fwd    { fill: #57606a; }
+    .ah-gate   { fill: #bc4c00; }
+    .ah-phase  { fill: #1a7f37; }
+
+    .rail      { fill: none; stroke: #1a7f37; stroke-width: 1.2; stroke-dasharray: 2 5; }
+    .rail-link { fill: none; stroke: #1a7f37; stroke-width: 1; stroke-dasharray: 2 4; }
+    .rail-dot  { fill: #1a7f37; }
+    .hairline  { stroke: #d0d7de; stroke-width: 1; }
+
+    text { font: 11px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; fill: #24292f; }
+    .d-t  { font-size: 13.5px; font-weight: 600; }
+    .d-s  { font-size: 11px; fill: #57606a; }
+    .d-d  { font-size: 12.5px; font-weight: 600; }
+    .d-m  { font: 500 12.5px ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace; }
+    .d-m2 { font: 500 10.5px ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace; }
+    .d-e  { font-size: 10.5px; fill: #57606a; }
+    .d-eb { font-size: 10.5px; fill: #bc4c00; }
+    .d-p  { font: 500 10px ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace; fill: #1a7f37; letter-spacing: 0.06em; }
+    .d-n  { font: 9px ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace; fill: #57606a; letter-spacing: 0.06em; }
+
+    @media (prefers-color-scheme: dark) {
+      .background { fill: #0d1117; }
+
+      .node       { fill: #161b22; stroke: #30363d; }
+      .node-entry { fill: #161b22; stroke: #3fb950; }
+      .node-gate  { fill: #161b22; stroke: #db6d28; }
+      .node-alt   { fill: #161b22; stroke: #6e7681; }
+      .diamond    { fill: #26190f; stroke: #db6d28; }
+
+      .edge      { stroke: #8c959f; }
+      .edge-gate { stroke: #db6d28; }
+      .ah-fwd    { fill: #8c959f; }
+      .ah-gate   { fill: #db6d28; }
+      .ah-phase  { fill: #3fb950; }
+
+      .rail      { stroke: #3fb950; }
+      .rail-link { stroke: #3fb950; }
+      .rail-dot  { fill: #3fb950; }
+      .hairline  { stroke: #30363d; }
+
+      text { fill: #f0f6fc; }
+      .d-s  { fill: #8c959f; }
+      .d-e  { fill: #8c959f; }
+      .d-eb { fill: #db6d28; }
+      .d-p  { fill: #3fb950; }
+      .d-n  { fill: #8c959f; }
+    }
+  </style>
+
+  <defs>
+    <marker id="ah" viewBox="0 0 10 10" refX="9.2" refY="5" markerWidth="6.5" markerHeight="6.5" orient="auto-start-reverse">
+      <path class="ah-fwd" d="M0,0 L10,5 L0,10 Z"/>
+    </marker>
+    <marker id="ahb" viewBox="0 0 10 10" refX="9.2" refY="5" markerWidth="6.5" markerHeight="6.5" orient="auto-start-reverse">
+      <path class="ah-gate" d="M0,0 L10,5 L0,10 Z"/>
+    </marker>
+    <marker id="ahp" viewBox="0 0 10 10" refX="9.2" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path class="ah-phase" d="M0,0 L10,5 L0,10 Z"/>
+    </marker>
+  </defs>
+
+  <rect class="background" width="1000" height="1350"/>
+
+  <!-- ================= phase rail ================= -->
+  <text class="d-n" x="96" y="32" text-anchor="end">HARNESS PHASE</text>
+
+  <path class="rail" d="M110,66 V372" marker-end="url(#ahp)"/>
+  <path class="rail" d="M110,382 V480" marker-end="url(#ahp)"/>
+  <path class="rail" d="M110,490 V598" marker-end="url(#ahp)"/>
+  <path class="rail" d="M110,608 V1197" marker-end="url(#ahp)"/>
+
+  <path class="rail-link" d="M186,62 H118" marker-end="url(#ahp)"/>
+  <circle class="rail-dot" cx="110" cy="62" r="4"/>
+  <text class="d-p" x="96" y="65.5" text-anchor="end">GROUNDED</text>
+
+  <path class="rail-link" d="M186,377 H118" marker-end="url(#ahp)"/>
+  <circle class="rail-dot" cx="110" cy="377" r="4"/>
+  <text class="d-p" x="96" y="380.5" text-anchor="end">PREDICTED</text>
+
+  <path class="rail-link" d="M186,485 H118" marker-end="url(#ahp)"/>
+  <circle class="rail-dot" cx="110" cy="485" r="4"/>
+  <text class="d-p" x="96" y="488.5" text-anchor="end">ATTEMPTED</text>
+
+  <path class="rail-link" d="M186,603 H118" marker-end="url(#ahp)"/>
+  <circle class="rail-dot" cx="110" cy="603" r="4"/>
+  <text class="d-p" x="96" y="606.5" text-anchor="end">VERIFIED</text>
+
+  <path class="rail-link" d="M186,1202 H118" marker-end="url(#ahp)"/>
+  <circle class="rail-dot" cx="110" cy="1202" r="4"/>
+  <text class="d-p" x="96" y="1205.5" text-anchor="end">ASSESSED</text>
+
+  <!-- ================= edges ================= -->
+  <path class="edge" d="M390,94 V132" marker-end="url(#ah)"/>
+
+  <path class="edge" d="M390,190 V210 H760"/>
+  <path class="edge" d="M390,210 V230" marker-end="url(#ah)"/>
+  <path class="edge" d="M760,210 V230" marker-end="url(#ah)"/>
+
+  <path class="edge" d="M760,300 V320 H390"/>
+  <path class="edge" d="M390,300 V344" marker-end="url(#ah)"/>
+
+  <path class="edge" d="M390,410 V448" marker-end="url(#ah)"/>
+  <path class="edge" d="M390,522 V560" marker-end="url(#ah)"/>
+  <path class="edge" d="M390,646 V684" marker-end="url(#ah)"/>
+  <path class="edge" d="M390,752 V768" marker-end="url(#ah)"/>
+
+  <path class="edge-gate" d="M508,816 H950"/>
+  <text class="d-eb" x="700" y="806" text-anchor="middle">no — narrow it, or reject and restart smaller</text>
+
+  <path class="edge" d="M390,864 V900" marker-end="url(#ah)"/>
+  <text class="d-e" x="400" y="886">yes</text>
+
+  <path class="edge" d="M390,1004 V1034" marker-end="url(#ah)"/>
+
+  <path class="edge-gate" d="M495,1078 H620" marker-end="url(#ahb)"/>
+  <text class="d-eb" x="548" y="1070" text-anchor="middle">no</text>
+
+  <path class="edge-gate" d="M760,1046 V952 H590" marker-end="url(#ahb)"/>
+  <text class="d-eb" x="700" y="944" text-anchor="middle">cycle 2</text>
+
+  <path class="edge-gate" d="M760,1110 V1146" marker-end="url(#ahb)"/>
+  <text class="d-eb" x="772" y="1133">fails twice</text>
+
+  <path class="edge" d="M390,1122 V1170" marker-end="url(#ah)"/>
+  <text class="d-e" x="400" y="1152">yes</text>
+
+  <path class="edge" d="M390,1234 V1274 H950"/>
+  <path class="edge" d="M760,1234 V1274"/>
+  <text class="d-e" x="402" y="1266">loop starts clean</text>
+  <text class="d-e" x="772" y="1266">fresh attempt at the same task</text>
+
+  <path class="edge" d="M950,1274 V62 H590" marker-end="url(#ah)"/>
+  <text class="d-e" x="770" y="52" text-anchor="middle">back to /ducktutor:start</text>
+
+  <!-- ================= nodes ================= -->
+
+  <!-- 1. start -->
+  <rect class="node-entry" x="190" y="30" width="400" height="64" rx="7"/>
+  <text class="d-m" x="210" y="54">/ducktutor:start &lt;problem or issue URL&gt;</text>
+  <text class="d-s" x="210" y="72">or $ducktutor:tutor in Codex</text>
+  <text class="d-s" x="210" y="88">states behavior, approach, riskiest edge, verification signal</text>
+
+  <!-- 2. prediction -->
+  <rect class="node" x="190" y="132" width="400" height="58" rx="7"/>
+  <text class="d-t" x="210" y="157">Answer one prediction or trade-off question</text>
+  <text class="d-s" x="210" y="175">choice-based by default; “I’m unsure” is an exclusive option</text>
+
+  <!-- 3a. implement -->
+  <rect class="node" x="190" y="230" width="400" height="70" rx="7"/>
+  <text class="d-m" x="210" y="254">/ducktutor:implement</text>
+  <text class="d-s" x="210" y="273">you write the load-bearing code</text>
+  <text class="d-s" x="210" y="289">the agent may touch only approved support files</text>
+
+  <!-- 3b. force-agent -->
+  <rect class="node-alt" x="620" y="230" width="280" height="70" rx="7"/>
+  <text class="d-m2" x="638" y="254">/ducktutor:implement --force-agent</text>
+  <text class="d-s" x="638" y="272">an approved all-agent map</text>
+  <text class="d-s" x="638" y="288">refused until another command has run</text>
+
+  <!-- 4. ownership map -->
+  <rect class="node" x="190" y="344" width="400" height="66" rx="7"/>
+  <text class="d-t" x="210" y="368">Approve the ownership map</text>
+  <text class="d-s" x="210" y="386">which files are yours, which the agent may edit</text>
+  <text class="d-s" x="210" y="402">persisted in Git metadata, not the working tree</text>
+
+  <!-- 5. implement -->
+  <rect class="node" x="190" y="448" width="400" height="74" rx="7"/>
+  <text class="d-t" x="210" y="472">Implement the scoped change</text>
+  <text class="d-s" x="210" y="490">every agent edit still needs your approval</text>
+  <text class="d-s" x="210" y="506">the guard denies learner-owned and unscoped paths</text>
+
+  <!-- 6. observe -->
+  <rect class="node" x="190" y="560" width="400" height="86" rx="7"/>
+  <text class="d-t" x="210" y="584">Observe it working, then record what you saw</text>
+  <text class="d-s" x="210" y="602">a scoped MCP run drives the real flow end to end</text>
+  <text class="d-s" x="210" y="618">you run the build and test commands yourself</text>
+  <text class="d-s" x="210" y="634">it stores that evidence instead of assuming it works</text>
+
+  <!-- 7. review -->
+  <rect class="node" x="190" y="684" width="400" height="68" rx="7"/>
+  <text class="d-m" x="210" y="708">/ducktutor:review</text>
+  <text class="d-s" x="210" y="727">reads the actual Git diff, not its earlier suggestion</text>
+  <text class="d-s" x="210" y="743">checks scope, abstractions, coupling, tests, project fit</text>
+
+  <!-- decision 1 -->
+  <polygon class="diamond" points="390,768 508,816 390,864 272,816"/>
+  <text class="d-d" x="390" y="820" text-anchor="middle">Confidence restored?</text>
+
+  <!-- 8. checkpoint -->
+  <rect class="node-gate" x="190" y="900" width="400" height="104" rx="7"/>
+  <text class="d-t" x="210" y="924">Checkpoint — mandatory, and it blocks</text>
+  <text class="d-s" x="210" y="943">quiz mode: two correct answers within three scenarios</text>
+  <text class="d-s" x="210" y="959">free-text: one load-bearing decision and its failure mode</text>
+  <text class="d-s" x="210" y="975">deep reflection instead after --force-agent, grown scope,</text>
+  <text class="d-s" x="210" y="991">an outsized diff, or hidden coupling</text>
+
+  <!-- decision 2 -->
+  <polygon class="diamond" points="390,1034 495,1078 390,1122 285,1078"/>
+  <text class="d-d" x="390" y="1082" text-anchor="middle">Passed?</text>
+
+  <!-- 9. retry -->
+  <rect class="node-alt" x="620" y="1046" width="280" height="64" rx="7"/>
+  <text class="d-t" x="638" y="1072">Retry — cycle two</text>
+  <text class="d-s" x="638" y="1090">new scenarios, same task</text>
+
+  <!-- 10. retired -->
+  <rect class="node" x="190" y="1170" width="400" height="64" rx="7"/>
+  <text class="d-t" x="210" y="1196">Task retired — the understanding is yours</text>
+  <text class="d-s" x="210" y="1214">state clears; the next task starts from nothing</text>
+
+  <!-- 11. rebuild -->
+  <rect class="node-alt" x="620" y="1146" width="280" height="88" rx="7"/>
+  <text class="d-m2" x="638" y="1170">/ducktutor:teach-me</text>
+  <text class="d-m2" x="638" y="1186">/ducktutor:explain</text>
+  <text class="d-s" x="638" y="1206">after two failed cycles DuckTutor</text>
+  <text class="d-s" x="638" y="1222">stops retesting and rebuilds first</text>
+
+  <!-- ================= legend ================= -->
+  <line class="hairline" x1="190" y1="1300" x2="950" y2="1300"/>
+
+  <line class="edge" x1="190" y1="1324" x2="214" y2="1324"/>
+  <text class="d-e" x="220" y="1327.5">advances the loop</text>
+
+  <line class="edge-gate" x1="340" y1="1324" x2="364" y2="1324"/>
+  <text class="d-e" x="370" y="1327.5">a gate refuses to advance</text>
+
+  <rect class="node-alt" x="534" y="1317" width="24" height="14" rx="3"/>
+  <text class="d-e" x="564" y="1327.5">alternate route</text>
+
+  <line class="rail" x1="672" y1="1324" x2="696" y2="1324"/>
+  <text class="d-e" x="702" y="1327.5">phase advanced by the harness</text>
+</svg>

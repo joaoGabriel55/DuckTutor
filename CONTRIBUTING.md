@@ -39,6 +39,20 @@ Every user-facing change must preserve these rules:
 18. Published token-efficiency claims distinguish output savings from total input-plus-output savings,
     disclose model-call cost, and remain reproducible. Historical observations missing settings must
     be labeled non-reproducible and excluded from product claims or later comparisons.
+19. Guard denials and checkpoint failures/abandonments are appended to a bounded lessons log by the
+    hooks themselves, never by model self-report. Session start restores only a capped recent summary,
+    and `/ducktutor:clean` removes the log with the rest of Git-local state.
+20. Learning phases advance from observable events recorded by the harness — an approved ownership
+    map, a scoped edit, recorded verification evidence, a passed checkpoint — never from a phase name
+    the model chooses. The model supplies data; `next` reports the single legal next action. Phases
+    still advance one step at a time and never move backward.
+21. Recording an ownership map and recording verification evidence always require human approval.
+    Ownership defines the write-authorization boundary, and evidence is a claim of fact about checks
+    the developer ran; neither may be assumed on the developer's behalf.
+22. `SessionStart` restores context and never enforces. Enforcement events stay scoped to explicit
+    DuckTutor commands, so the plugin never constrains unrelated work in the same session.
+23. A task that cannot be demonstrated after repeated checkpoints routes back to teaching rather than
+    being retested indefinitely, and an assessed task is explicitly retired so the next one starts clean.
 
 The central behavioral contract lives in `skills/tutor/SKILL.md`. Keep commands focused on their
 entry-point-specific behavior instead of copying the entire contract into each prompt.
@@ -103,6 +117,10 @@ Claude or Codex prompts. Command entry reloads state and blocks other
 DuckTutor commands until the checkpoint is answered, except that an explicit `/start` retires the
 pending task and creates a fresh boundary. Retired agent-edited paths remain in state so review can
 flag unexplained changes that still appear in the working diff.
+Alongside `state.json`, the state module appends every guard denial, incorrect checkpoint answer, and
+checkpoint abandonment to a capped `.git/ducktutor/lessons.jsonl`—written by the hooks, never the
+model—exposed read-only through `scripts/command-harness.sh lessons` and restored as a bounded recent
+summary at session start. `/ducktutor:clean` removes it with the rest of Git-local state.
 
 ## Developing locally
 
@@ -155,6 +173,7 @@ scripts/test-teaching-contract.sh
 scripts/test-teaching-eval.sh
 scripts/test-token-benchmark.sh
 scripts/test-bump-version.sh
+scripts/test-version-automation.sh
 ```
 
 Enforce the model-facing prompt budget:
@@ -241,6 +260,15 @@ Then smoke-test the learning loop on both platforms:
 18. Start an unrelated task with and without a pending checkpoint; confirm the old task and ownership
     map are retired, a skipped checkpoint does not record understanding, and bare harness names are
     denied.
+19. Trigger a guard denial, an incorrect checkpoint answer, and a confirmed checkpoint abandonment;
+    confirm each is appended to the lessons log, a capped recent summary appears in session-start
+    context, and `/ducktutor:clean` clears the log.
+20. Walk one full loop and assert the phase after each event: `/start` grounds, an approved ownership
+    map predicts, a scoped edit attempts, recorded evidence verifies, a passed checkpoint assesses,
+    and completion returns to idle with the task recorded. Confirm the model never names a phase and
+    that `next` reports the same step at each point.
+21. Fail two checkpoint cycles on one task; confirm remediation engages, deep reflection is forced,
+    `/teach-me` and `/explain` reopen while other commands stay locked, and the escalation is logged.
 
 Resume or compact an active task and confirm its task, phase, and ownership map return. Persisted
 `responseMode` is the default; risk escalation determines the effective checkpoint mode. Quiz questions have two to four mutually exclusive
@@ -261,7 +289,8 @@ actual change, quiz mode varies correct positions, and risk escalation cannot be
 
 ## Release version
 
-Use `scripts/bump-version.sh <major.minor.patch>` to update all Claude and Codex release manifests
-together. The command rejects invalid versions, downgrades, unchanged versions, and pre-existing
-manifest drift. Follow [RELEASING.md](RELEASING.md) to validate, commit, tag, push, and create the
-GitHub release.
+Add a changeset with `pnpm changeset` for each user-facing change. After changes land on `main`, the
+Changesets workflow opens or updates a release PR. Its version command updates `package.json` and
+synchronizes the Claude marketplace, Claude plugin, and Codex plugin manifests. The existing
+`scripts/bump-version.sh <major.minor.patch>` command remains available for manual recovery and now
+updates all four manifests together. Follow [RELEASING.md](RELEASING.md) for the complete flow.

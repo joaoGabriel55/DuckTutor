@@ -42,6 +42,10 @@ technical judgment.
   correct answers within three scenarios; free-text mode requires a satisfactory explanation of a
   load-bearing decision and failure mode. Until completion, other commands remain locked except
   `/config`, `/clean`, `/checkpoint`, and a fresh `/start`.
+- After two failed checkpoint cycles on the same task, DuckTutor stops retesting and routes back to
+  `/teach-me` or `/explain` to rebuild the mental model before another attempt.
+- You run your own build and test commands; DuckTutor records the evidence you report and cannot
+  advance a task to verified without it.
 - A disproportionate diff or hidden/system coupling also escalates the checkpoint to deep reflection.
   If narrowing cannot restore confidence, DuckTutor recommends rejecting the diff and restarting
   from a smaller plan.
@@ -50,6 +54,9 @@ technical judgment.
   recording understanding; its agent-edited paths remain marked for later review while still present
   in the working diff.
 - DuckTutor never hides a write inside shell commands or expands into unrelated cleanup.
+- Guard denials and checkpoint failures/abandonments are mechanically appended to a bounded lessons
+  log by the hooks themselves, never self-reported by the model, and a capped recent summary is
+  restored at session start so past blocked approaches and missed checkpoints are not repeated.
 
 > **Hybrid ownership is enforced:** DuckTutor's default-deny hook checks native edits against the
 > active ownership map. Agent-editable files still require approval; learner-owned and unscoped files
@@ -98,8 +105,9 @@ DUCKTUTOR_BENCHMARK_LABEL='Claude 4.2, model and settings used' \
   node scripts/benchmark-tokens.mjs --samples 3
 ```
 
-The benchmark uses five self-contained cases matching the review principles above: explainability,
-diff proportionality, premature abstraction, hidden coupling, and understanding over blind trust.
+The benchmark uses eight self-contained cases matching the review and learning-loop principles above:
+explainability, diff proportionality, premature abstraction, hidden coupling, understanding over
+blind trust, event-driven completion, checkpoint remediation, and lessons-based recovery.
 Each case runs in baseline and DuckTutor modes, and each call gets a separate temporary Git
 repository with response-only instructions. It reports approximate input tokens, output tokens,
 output savings, and net savings using `ceil(characters / 4)`. The input delta measures DuckTutor
@@ -109,15 +117,15 @@ text; positive net savings mean that reduction covered this prompt overhead. Neg
 reported rather than hidden—short interactions may cost more total tokens while still avoiding a
 large generated implementation or an unjustified change.
 
-Three samples make 30 model calls. Use `--samples 1` for a faster 10-call comparison. Results depend
+Three samples make 48 model calls. Use `--samples 1` for a faster 16-call comparison. Results depend
 on the model, CLI configuration, prompt caching, and sampling, and are not
 billing measurements. The benchmark does not quantify the additional value of a smaller diff,
 earlier design rejection, or developer understanding.
 
-### Results — 2026-09-04 (v0.13.0)
+### Results — 2026-09-08 (v0.14.0)
 
-These three-sample runs compare the same five prompts and report per-pair averages, except for the
-aggregate rows, which report all 15 calls per mode. “Net saved” subtracts the measured DuckTutor
+These three-sample runs compare all eight v0.14.0 prompts and report per-pair averages, except for the
+aggregate rows, which report all 24 calls per mode. “Net saved” subtracts the measured DuckTutor
 prompt input overhead; it still excludes command prompts, restored context, task state, and hook messages.
 Because the supplied labels did not record complete CLI settings, these results are non-reproducible
 observations rather than product claims.
@@ -129,12 +137,15 @@ so an exact reproduction requires a new run with a more specific label.
 
 | Scenario | Baseline output | DuckTutor output | Output saved | Net saved |
 | --- | ---: | ---: | ---: | ---: |
-| Explain approach | 320.3 | 162.3 | 158.0 (49.3%) | -768.0 |
-| Diff proportionality | 128.7 | 143.3 | -14.7 (-11.4%) | -940.7 |
-| Premature abstraction | 284.7 | 183 | 101.7 (35.7%) | -824.3 |
-| Reasoning and coupling | 243 | 143.7 | 99.3 (40.9%) | -826.7 |
-| Understanding over output | 95 | 97 | -2 (-2.1%) | -928 |
-| Aggregate (total) | 3215 | 2188 | 1027 (31.9%) | -12863 |
+| Explain approach | 272 | 164 | 108 (39.7%) | -807 |
+| Diff proportionality | 136.3 | 152.3 | -16 (-11.7%) | -931 |
+| Premature abstraction | 225 | 190.3 | 34.7 (15.4%) | -880.3 |
+| Reasoning and coupling | 254 | 148.3 | 105.7 (41.6%) | -809.3 |
+| Understanding over output | 95.7 | 85 | 10.7 (11.1%) | -904.3 |
+| Event-driven completion | 45.3 | 51 | -5.7 (-12.5%) | -920.7 |
+| Checkpoint remediation | 74.3 | 62 | 12.3 (16.6%) | -902.7 |
+| Lessons-based recovery | 59.3 | 82.7 | -23.3 (-39.3%) | -938.3 |
+| Aggregate (total) | 3486 | 2807 | 679 (19.5%) | -21281 |
 
 #### Claude Opus 5
 
@@ -143,21 +154,24 @@ recorded, so an exact reproduction requires a new run with a more specific label
 
 | Scenario | Baseline output | DuckTutor output | Output saved | Net saved |
 | --- | ---: | ---: | ---: | ---: |
-| Explain approach | 960.7 | 251.3 | 709.3 (73.8%) | -216.7 |
-| Diff proportionality | 766 | 278.3 | 487.7 (63.7%) | -438.3 |
-| Premature abstraction | 764 | 229.7 | 534.3 (69.9%) | -391.7 |
-| Reasoning and coupling | 1132.3 | 309.7 | 822.7 (72.7%) | -103.3 |
-| Understanding over output | 552.3 | 265 | 287.3 (52.0%) | -638.7 |
-| Aggregate (total) | 12526 | 4002 | 8524 (68.1%) | -5366 |
+| Explain approach | 915.3 | 210.3 | 705 (77.0%) | -210.0 |
+| Diff proportionality | 644.3 | 262 | 382.3 (59.3%) | -532.7 |
+| Premature abstraction | 792.7 | 279.3 | 513.3 (64.8%) | -401.7 |
+| Reasoning and coupling | 1014.7 | 313.3 | 701.3 (69.1%) | -213.7 |
+| Understanding over output | 553.7 | 269.3 | 284.3 (51.4%) | -630.7 |
+| Event-driven completion | 277.3 | 148.3 | 129.0 (46.5%) | -786.0 |
+| Checkpoint remediation | 523.7 | 151.7 | 372 (71.0%) | -543 |
+| Lessons-based recovery | 388.3 | 168.7 | 219.7 (56.6%) | -695.3 |
+| Aggregate (total) | 15330 | 5409 | 9921 (64.7%) | -12039 |
 
 The chart plots baseline and DuckTutor output for every scenario. Each provider has its own scale so
 the shape of both series remains readable; the legend identifies each line by name and color.
 
 ![Baseline and DuckTutor output-token line charts for Codex Sol and Claude Opus 5](docs/benchmark-output-comparison.svg)
 
-Claude Opus 5 reduced output by 68.1% overall, while Codex Sol reduced it by 31.9% and produced more
-text in two scenarios. Neither run achieved positive net token savings because the DuckTutor prompt
-added 926 approximate input tokens to every comparison. DuckTutor's purpose is behavioral:
+Claude Opus 5 reduced output by 64.7% overall, while Codex Sol reduced it by 19.5% and produced more
+text in three scenarios. Neither run achieved positive net token savings because the DuckTutor prompt
+added 915 approximate input tokens to every comparison. DuckTutor's purpose is behavioral:
 encouraging smaller, explainable changes. These observations do not establish total-token efficiency.
 
 ### Codex prompt optimization since v0.10.0
@@ -166,7 +180,7 @@ The v0.10.0 Codex run showed that the shared prompt cost dominated short interac
 simple verdict scenarios produced more output. Version 0.11.0 therefore compresses the shared skill
 from 672 to 449 words, caps routine answers at 120 words and simple verdicts at 80, and tells the
 model not to restate supplied facts. The current 450-word skill has estimated DuckTutor prompt
-overhead of 926 tokens per call on these inputs, down from 1,277—approximately 351 tokens (27.5%).
+overhead of 915 tokens per call on these inputs, down from 1,277—approximately 362 tokens (28.3%).
 This is an input-only estimate. The results above show measured output and net savings from the
 current live benchmark runs.
 
@@ -256,8 +270,8 @@ Reset DuckTutor manually when its persisted state is no longer useful:
 
 Like config, this command runs through a `UserPromptExpansion` hook without invoking Claude. It
 removes all DuckTutor state stored in Git metadata, including active tasks, checkpoints, retired-change
-history, and response-mode configuration. Project files and Git history are untouched; the next
-session starts in quiz mode.
+history, the lessons log, and response-mode configuration. Project files and Git history are
+untouched; the next session starts in quiz mode.
 
 ### `/ducktutor:implement [--force-agent] [problem or feature and optional file scope]`
 
@@ -299,11 +313,30 @@ permissions, file ownership, or user authorization.
 DuckTutor stores one active task per Git repository under `.git/ducktutor/state.json`, so it does not
 dirty the working tree. The state records the task, ownership map, and current phase:
 `grounded → predicted → attempted → verified → assessed`. It also records command engagement and
-whether a comprehension checkpoint is pending. The next explicit DuckTutor command reloads this state
-after startup, resume, clear, or context compaction. State records progress; it does not prove
-understanding or replace inspection of the current diff. The map cannot be used while another branch
+whether a comprehension checkpoint is pending.
+
+Phases advance from events the harness observes, not from a phase the model announces: recording an
+approved ownership map predicts, a scoped edit attempts, recorded verification evidence verifies, and
+a passed checkpoint assesses. Verification and assessment form a join — a task becomes `assessed`
+only once both have landed, in either order. Because phases can only advance one step and never move
+backward, a skipped or invented transition fails instead of silently desynchronizing.
+
+Session start restores this state into a new session; it never enforces anything. The next explicit
+DuckTutor command reloads it after startup, resume, clear, or context compaction. State records
+progress; it does not prove understanding or replace inspection of the current diff. The map cannot be used while another branch
 is checked out or when rewritten history no longer descends from its approved baseline. DuckTutor
 then requires fresh inspection and ownership-map approval before editing.
+
+## Lessons log
+
+Alongside `state.json`, DuckTutor keeps an append-only `.git/ducktutor/lessons.jsonl`. The hooks
+themselves—not the model—append an entry whenever the guard denies a native edit or shell command,
+a checkpoint is answered incorrectly, or a checkpoint is explicitly abandoned. Each entry is
+mechanically captured ground truth (timestamp, event type, tool, and denial reason or task label),
+capped at 200 entries on disk. Session start restores only the five most recent entries as a compact
+summary, so past blocked approaches and missed checkpoints inform the next attempt without the
+model re-reading or re-deriving history, and without unbounded token growth as the log accumulates.
+`/ducktutor:clean` removes the log along with the rest of DuckTutor's Git-local state.
 
 ## MCP-assisted verification
 
@@ -356,18 +389,32 @@ marketplace is intentionally separate from editing this source repository.
 
 ## Typical loop
 
+![Flow chart of the DuckTutor loop, from /ducktutor:start through implementation, observation, review, and the mandatory checkpoint, with the harness phase rail alongside](docs/typical-loop-flow.svg)
+
+Grey edges advance the loop and orange edges mark a gate refusing to advance; every refusal returns to
+`/ducktutor:start`. Dashed boxes are the routes taken only when the main one does not apply. The rail on
+the left is the harness phase, moved by the event beside it.
+
 1. Start a feature or fix with `/ducktutor:start <problem>` in Claude Code or `$ducktutor:tutor` in Codex.
 2. Reason through one prediction or trade-off question, then choose `/ducktutor:implement` or
    `/ducktutor:implement --force-agent`.
 3. Approve the proposed ownership map and implement the scoped change.
 4. Let DuckTutor perform scoped MCP-assisted end-to-end observation when a suitable tool is
-   available, and run any remaining shell test command yourself.
+   available, and run any remaining shell test command yourself. Record what you observed; DuckTutor
+   stores that evidence rather than assuming the change works.
 5. Run `/ducktutor:review` on the actual changes.
 6. Complete the required checkpoint in your configured response mode; other DuckTutor commands
    remain locked until it passes. Change modes through `/ducktutor:config --mode=<mode>`, reset all
    plugin state through `/ducktutor:clean`, or use `/ducktutor:start <new task>` to retire the old
    task and begin fresh without claiming understanding.
 7. Revise or reject the change when understanding or evidence is weak.
+8. When the checkpoint passes, the task is retired and the loop starts clean. If two checkpoint
+   cycles fail, DuckTutor stops retesting and sends you back to `/ducktutor:teach-me` or
+   `/ducktutor:explain` to rebuild the mental model first.
+
+The phases — `grounded → predicted → attempted → verified → assessed` — are advanced by the harness
+from those events, not by the model deciding it has reached one. You supply the task, the ownership
+map, and the evidence; everything else is mechanical.
 
 ## Contributing
 

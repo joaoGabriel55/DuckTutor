@@ -35,18 +35,21 @@ chmod +x "$FIXTURES/failing-runner.sh"
 if DUCKTUTOR_BENCHMARK_TEST_ROOT="$ROOT" DUCKTUTOR_BENCHMARK_LABEL="fixture-model deterministic" DUCKTUTOR_BENCHMARK_COMMAND="$FIXTURES/runner.sh" node "$BENCHMARK" --samples 2 > "$FIXTURES/output" 2> "$FIXTURES/error"; then
   output="$(cat "$FIXTURES/output")"
   if [[ "$output" == *'Configuration: fixture-model deterministic'* &&
-        "$output" == *'Method: ceil(characters / 4); 5 scenarios; 2 samples each.'* &&
-        "$output" == *'Model calls: 20 (10 baseline + 10 DuckTutor).'* &&
+        "$output" == *'Method: ceil(characters / 4); 8 scenarios; 2 samples each.'* &&
+        "$output" == *'Model calls: 32 (16 baseline + 16 DuckTutor).'* &&
         "$output" == *'explain-approach'* &&
         "$output" == *'diff-proportionality'* &&
         "$output" == *'premature-abstraction'* &&
         "$output" == *'reasoning-coupling'* &&
         "$output" == *'understanding-over-output'* &&
+        "$output" == *'event-driven-completion'* &&
+        "$output" == *'checkpoint-remediation'* &&
+        "$output" == *'lessons-based-recovery'* &&
         "$output" == *'Per-pair averages'* &&
         "$output" == *'DuckTutor prompt overhead'* &&
-        "$output" == *'explain-approach | 10 | 2 | 8 (80.0%) | 75 | 1001 | 926 | -918'* &&
+        "$output" == *'explain-approach | 10 | 2 | 8 (80.0%) | 75 | 990 | 915 | -907'* &&
         "$output" == *'Actual run totals'* &&
-        "$output" == *'Aggregate | 100 | 20 | 80 (80.0%) | 750 | 10010 | 9260 | -9180'* &&
+        "$output" == *'Aggregate | 160 | 32 | 128 (80.0%) | 1210 | 15850 | 14640 | -14512'* &&
         ! -e "$ROOT/benchmark-side-effect" ]]; then
     printf 'PASS token benchmark: reports reproducible per-scenario and aggregate estimates\n'
   else
@@ -115,7 +118,7 @@ if grep -q '^## Approximate token benchmark$' "$ROOT/README.md" &&
    grep -q 'benchmark-tokens.mjs --samples 3' "$ROOT/README.md" &&
    grep -q 'aliases and functions' "$ROOT/README.md" &&
    grep -q 'prompt overhead' "$ROOT/README.md" &&
-   grep -q '^### Results — 2026-09-04 (v0.13.0)$' "$ROOT/README.md" &&
+   grep -q '^### Results — 2026-09-08 (v0.14.0)$' "$ROOT/README.md" &&
    grep -q 'non-reproducible' "$ROOT/README.md" &&
    grep -q '^### Codex prompt optimization since v0.10.0$' "$ROOT/README.md" &&
    grep -q '^#### Codex Sol$' "$ROOT/README.md" &&
@@ -123,13 +126,18 @@ if grep -q '^## Approximate token benchmark$' "$ROOT/README.md" &&
    grep -q 'docs/benchmark-output-comparison.svg' "$ROOT/README.md" &&
    grep -q 'Codex Sol baseline' "$ROOT/docs/benchmark-output-comparison.svg" &&
    grep -q 'Claude Opus 5 DuckTutor' "$ROOT/docs/benchmark-output-comparison.svg" &&
+   grep -q 'across eight scenarios' "$ROOT/docs/benchmark-output-comparison.svg" &&
+   grep -q '>Completion<' "$ROOT/docs/benchmark-output-comparison.svg" &&
+   grep -q '>Remediation<' "$ROOT/docs/benchmark-output-comparison.svg" &&
+   grep -q '>Lessons<' "$ROOT/docs/benchmark-output-comparison.svg" &&
    grep -q 'color-scheme: light dark' "$ROOT/docs/benchmark-output-comparison.svg" &&
    grep -q '\.background { fill: #ffffff; }' "$ROOT/docs/benchmark-output-comparison.svg" &&
    grep -q '@media (prefers-color-scheme: dark)' "$ROOT/docs/benchmark-output-comparison.svg" &&
    grep -q '\.background { fill: #0d1117; }' "$ROOT/docs/benchmark-output-comparison.svg" &&
    grep -q '\.baseline { stroke: #d29922; }' "$ROOT/docs/benchmark-output-comparison.svg" &&
    grep -q '\.ducktutor { stroke: #58a6ff; }' "$ROOT/docs/benchmark-output-comparison.svg" &&
-   grep -q '| Aggregate (total) | 12526 | 4002 | 8524 (68.1%) | -5366 |' "$ROOT/README.md" &&
+   grep -q '| Aggregate (total) | 3486 | 2807 | 679 (19.5%) | -21281 |' "$ROOT/README.md" &&
+   grep -q '| Aggregate (total) | 15330 | 5409 | 9921 (64.7%) | -12039 |' "$ROOT/README.md" &&
    grep -qi 'model-call cost' "$ROOT/CONTRIBUTING.md"; then
   printf 'PASS token benchmark: user and contributor documentation disclose the trade-off\n'
 else
