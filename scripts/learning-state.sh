@@ -338,10 +338,15 @@ switch (command) {
   case "checkpoint": {
     const current = readState();
     const action = args[0];
-    if (action === "abandon" && args.length === 2 && args[1] === "choice-confirmed") {
+    if (action === "abandon" && args.length === 2 && ["choice-confirmed", "host-clear"].includes(args[1])) {
       if (!current.checkpointRequired) fail("no comprehension checkpoint is pending");
       const retiredAt = new Date().toISOString();
-      appendLesson({ type: "checkpoint-abandoned", task: current.task, phase: current.phase });
+      appendLesson({
+        type: "checkpoint-abandoned",
+        task: current.task,
+        phase: current.phase,
+        trigger: args[1] === "host-clear" ? "host-clear" : "developer-confirmed",
+      });
       writeState({
         ...idle,
         repositoryRoot,
@@ -417,7 +422,7 @@ switch (command) {
         remediationTopic: null,
       }));
     } else {
-      fail("checkpoint requires require [deep-reflection], record correct|incorrect|unsure, a mode-matched pass token, or abandon choice-confirmed");
+      fail("checkpoint requires require [deep-reflection], record correct|incorrect|unsure, a mode-matched pass token, or a valid abandon trigger");
     }
     break;
   }

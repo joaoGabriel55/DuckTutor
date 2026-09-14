@@ -34,8 +34,9 @@ Every user-facing change must preserve these rules:
     narrowing cannot restore confidence in a change, recommend rejecting it and restarting smaller.
 16. Explicit start commands create fresh task state and every internal command uses its canonical
     plugin-root path; stale task maps and bare script names must never be reused.
-17. Checkpoints persist across sessions; explicit abandonment requires confirmation, records no
-    understanding, and clears only the abandoned task and ownership map.
+17. Checkpoints persist across startup, resume, and compaction. Explicit `/checkpoint --abandon`
+    requires confirmation; a host-native `/clear` is itself the reset signal and mechanically
+    abandons a pending task. Both record no understanding and preserve configuration and history.
 18. Published token-efficiency claims distinguish output savings from total input-plus-output savings,
     disclose model-call cost, and remain reproducible. Historical observations missing settings must
     be labeled non-reproducible and excluded from product claims or later comparisons.
@@ -49,8 +50,9 @@ Every user-facing change must preserve these rules:
 21. Recording an ownership map and recording verification evidence always require human approval.
     Ownership defines the write-authorization boundary, and evidence is a claim of fact about checks
     the developer ran; neither may be assumed on the developer's behalf.
-22. `SessionStart` restores context and never enforces. Enforcement events stay scoped to explicit
-    DuckTutor commands, so the plugin never constrains unrelated work in the same session.
+22. `SessionStart` restores context and, only for source `clear`, retires a pending checkpoint before
+    restoring. Enforcement events stay scoped to explicit DuckTutor commands, so the plugin never
+    constrains unrelated work in the same session.
 23. A task that cannot be demonstrated after repeated checkpoints routes back to teaching rather than
     being retested indefinitely, and an assessed task is explicitly retired so the next one starts clean.
 
