@@ -55,8 +55,8 @@ expect_text "zero-model config expansion hook configured" 'UserPromptExpansion' 
 expect_text "config expansion targets deterministic hook" 'config-command\.sh' "$ROOT/hooks/hooks.json"
 expect_text "clean expansion targets deterministic hook" 'clean-command\.sh' "$ROOT/hooks/hooks.json"
 
-# SessionStart is read-only context restoration and is deliberately global.
-# Enforcement events must stay scoped to explicit DuckTutor commands.
+# SessionStart restores context globally and may retire a pending checkpoint only
+# for a host-native clear. Enforcement stays scoped to DuckTutor commands.
 if HOOKS_FILE="$ROOT/hooks/hooks.json" node -e '
   const hooks = JSON.parse(require("fs").readFileSync(process.env.HOOKS_FILE, "utf8")).hooks;
   const globalEnforcement = ["PreToolUse", "PostToolUse", "UserPromptSubmit"];
@@ -69,7 +69,8 @@ else
 fi
 
 expect_text "session context restores across sessions" 'SessionStart' "$ROOT/hooks/hooks.json"
-expect_text "session restore targets the read-only hook" 'session-start\.sh' "$ROOT/hooks/hooks.json"
+expect_text "session restore and clear handling target the lifecycle hook" 'session-start\.sh' "$ROOT/hooks/hooks.json"
+expect_text "host clear retires pending checkpoints" 'START_SOURCE.*clear' "$ROOT/hooks/session-start.sh"
 
 for file in "$ROOT"/commands/{teach-me,start,explain,review,hint,checkpoint,implement}.md; do
   expect_text "$(basename "$file") scopes the mutation guard" 'guard\.sh tool' "$file"

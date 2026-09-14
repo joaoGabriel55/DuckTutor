@@ -53,6 +53,8 @@ technical judgment.
   understanding and requires confirmation. Starting a fresh task also retires the old task without
   recording understanding; its agent-edited paths remain marked for later review while still present
   in the working diff.
+- Starting a fresh host chat with `/clear` mechanically abandons any pending checkpoint without
+  recording understanding, while preserving DuckTutor configuration and lessons history.
 - DuckTutor never hides a write inside shell commands or expands into unrelated cleanup.
 - Guard denials and checkpoint failures/abandonments are mechanically appended to a bounded lessons
   log by the hooks themselves, never self-reported by the model, and a capped recent summary is
@@ -272,6 +274,11 @@ Like config, this command runs through a `UserPromptExpansion` hook without invo
 removes all DuckTutor state stored in Git metadata, including active tasks, checkpoints, retired-change
 history, the lessons log, and response-mode configuration. Project files and Git history are
 untouched; the next session starts in quiz mode.
+
+The host-native `/clear` command starts a fresh chat and automatically abandons only a pending
+DuckTutor task; it preserves response-mode configuration and lessons history. In Codex, `/clean` is
+an alias for stopping background terminals, so use `/clear` for a fresh chat or the DuckTutor clean
+command for a full state reset.
 
 ### `/ducktutor:implement [--force-agent] [problem or feature and optional file scope]`
 

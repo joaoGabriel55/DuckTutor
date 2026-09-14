@@ -1,5 +1,5 @@
 {
-  "description": "Handle deterministic zero-model DuckTutor commands and restore learning state into new sessions.",
+  "description": "Handle deterministic zero-model DuckTutor commands, restore learning state, and retire pending checkpoints when a host chat is cleared.",
   "hooks": {
     "SessionStart": [
       {

@@ -149,6 +149,7 @@ expect_command_asked "confirmed checkpoint completion" "$HARNESS checkpoint-pass
 expect_command_asked "confirmed free-text checkpoint completion" "$HARNESS checkpoint-pass free-text-confirmed"
 expect_command_asked "confirmed checkpoint abandonment" "$HARNESS checkpoint-abandon choice-confirmed"
 expect_denied "unconfirmed checkpoint abandonment" "$HARNESS checkpoint-abandon"
+expect_denied "host-clear abandonment trigger is lifecycle-only" "$STATE checkpoint abandon host-clear"
 expect_denied "unsupported command harness action" "$HARNESS bypass"
 expect_allowed "command harness next action lookup" "$HARNESS next"
 expect_allowed "command harness task completion" "$HARNESS complete"
